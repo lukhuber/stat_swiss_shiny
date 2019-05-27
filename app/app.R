@@ -4,10 +4,10 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
             selectInput("outcome", label = h3("Outcome"),
-                        choices = list("Fertility" = "Fertility",
+                        choices = list( "Education" = "Education",
+                                        "Fertility" = "Fertility",
                                        "Agriculture" = "Agriculture",
                                        "Examination" = "Examination",
-                                       "Education" = "Education",
                                        "Catholic" = "Catholic",
                                        "Infant.Mortality" = "Infant.Mortality"), selected = 1),
             
@@ -33,7 +33,9 @@ ui <- fluidPage(
                                  fluidRow(
                                      column(6, plotOutput("boxplot1")),
                                      column(6, plotOutput("boxplot2")))), 
-                        tabPanel("Scatterplot", plotOutput("scatterplot")), # Plot
+                        tabPanel("Scatterplot", plotOutput("scatterplot")), # Scatterplot
+                        tabPanel("LM plot", plotOutput("lmplot")), # Plot
+                        tabPanel("ANOVA", plotOutput("anova")), # Plot
                         tabPanel("Distribution", # Plots of distributions
                                  fluidRow(
                                      column(6, plotOutput("distribution1")),
@@ -56,6 +58,12 @@ server <- function(input, output) {
         fit <- lm(swiss[,input$outcome] ~ swiss[,input$indepvar])
         names(fit$coefficients) <- c("Intercept", input$var2)
         summary(fit)
+    })
+    
+    # Regression plots
+    output$lmplot <- renderPlot({
+        fit <- lm(swiss[,input$outcome] ~ swiss[,input$indepvar])
+        plot(fit)
     })
     
     # Data output
@@ -90,6 +98,29 @@ server <- function(input, output) {
         abline(lm(swiss[,input$outcome] ~ swiss[,input$indepvar]), col="red")
         lines(lowess(swiss[,input$indepvar],swiss[,input$outcome]), col="blue")
     }, height=400)
+    
+    output$anova <- renderText({
+        ## model fitting
+        
+        Y = swiss$Education
+        X2 = swiss[,input$indepvar]
+        fm1 <- lm(Y ~ 1)
+        summary(fm1)
+        fmA <- anova(Y ~ swiss[,input$outcome])
+        summary(fmA)
+        fmB <- anova(Y ~ swiss[,input$indepvar])
+        summary(fmB)
+        fmAB <- anova(Y ~ swiss[,input$outcome] + swiss[,input$indepvar])
+        summary(fmAB)
+        fmAxB <- anova(Y ~ swiss[,input$outcome] * swiss[,input$indepvar])
+        summary(fmAxB)
+        
+        ## model selection
+        anova(fmAxB,fmAB)
+        anova(fmAB,fmA)
+        anova(fmAB,fmB)
+        
+    })
     
     
     # Histogram output var 1
