@@ -1,4 +1,11 @@
+## TODO: 
+##  - Der Slider in der Sidebar kann auch einen Minimalwert annehmen. Dies sollte nicht moeglich sein.
+##    Besser waere, wenn man keinen Slider sondern ein Textfeld verwenden wuerde. Oder keinen Minimalwert
+##    mit dem Slider angeben kann.
+##  - Fuer Punkt 2 fehlt noch die Moeglichkeit zur Qualitaetsueberpruefung des linearen Regressionsmodell
+
 library(shiny)
+library(maptools)
 ui <- fluidPage(
     titlePanel("Regression Model (Dataset: Swiss)"),
     sidebarLayout(
@@ -17,7 +24,8 @@ ui <- fluidPage(
                                        "Examination" = "Examination",
                                        "Education" = "Education",
                                        "Catholic" = "Catholic",
-                                       "Infant.Mortality" = "Infant.Mortality"), selected = 1)
+                                       "Infant.Mortality" = "Infant.Mortality"), selected = 1),
+            sliderInput("prob", label = "Max. Wahrscheinlichkeit [%]:", min = 1, max = 100, value = c(1, 100))
             
         ),
         
@@ -35,15 +43,16 @@ ui <- fluidPage(
                                      column(6, plotOutput("boxplot2")))), 
                         tabPanel("Scatterplot", plotOutput("scatterplot")), # Scatterplot
                         tabPanel("LM plot", plotOutput("lmplot")), # Plot
-                        tabPanel("ANOVA", plotOutput("anova")), # Plot
+                        #tabPanel("ANOVA", plotOutput("anova")), # Plot
                         tabPanel("Distribution", # Plots of distributions
                                  fluidRow(
                                      column(6, plotOutput("distribution1")),
                                      column(6, plotOutput("distribution2")))
                         ),
                         tabPanel("Model Summary", verbatimTextOutput("summary")), # Regression output
-                        tabPanel("Data", DT::dataTableOutput('tbl')) # Data as datatable
-                        
+                        tabPanel("Data", DT::dataTableOutput('tbl')), # Data as datatable
+                        tabPanel("Logistic Regressionmodel", verbatimTextOutput('logreg')), # Logistisches Regressionsmodell
+                        tabPanel("Linear Regressionmodel", plotOutput("linreg")) # Lineares Regressionsmodell
             )
         )
     ))
@@ -99,9 +108,26 @@ server <- function(input, output) {
         lines(lowess(swiss[,input$indepvar],swiss[,input$outcome]), col="blue")
     }, height=400)
     
+    # Logistisches Regressionsmodell
+    output$logreg <- renderPrint({
+      recode <- swiss[,input$outcome]
+      recode[recode>input$prob[2]] <- 1
+      recode[recode>1] <- 0
+      logistic_model <- glm(recode ~ swiss[,input$indepvar], data = swiss, family = binomial)
+      summary(logistic_model)
+    })
+    
+    # Lineares Regressionsmodell
+    output$linreg <- renderPlot({
+      fit <- lm(swiss[,input$outcome] ~ swiss[,input$indepvar], data = swiss)
+      plot(swiss[,input$outcome] ~ swiss[,input$indepvar] ,data=swiss, ylab = input$outcome, xlab = input$indepvar)
+      abline(fit,col="red")
+      crPlots(fit)
+    }, height=600, width=600)
+    
+    # ANOVA
     output$anova <- renderText({
         ## model fitting
-        
         Y = swiss$Education
         X2 = swiss[,input$indepvar]
         fm1 <- lm(Y ~ 1)
@@ -121,7 +147,6 @@ server <- function(input, output) {
         anova(fmAB,fmB)
         
     })
-    
     
     # Histogram output var 1
     output$distribution1 <- renderPlot({
