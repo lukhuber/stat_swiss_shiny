@@ -111,9 +111,8 @@ server <- function(input, output) {
     output$lmplot <- renderPlot({
         fit <- lm(swiss[,input$outcome] ~ swiss[,input$indepvar])
         plot(fit)
-        plot(lmResults())
 
-    }, height=300, width=300)
+    })
     
     # Data output
     output$tbl = DT::renderDataTable({
@@ -124,12 +123,12 @@ server <- function(input, output) {
     output$qqplot1 <- renderPlot({
         qqnorm(swiss[,input$outcome], main="Q-Q Plot", xlab=input$outcome)
         qqline(swiss[,input$outcome])
-    }, height=300, width=300)
+    })
     
     output$qqplot2 <- renderPlot({
         qqnorm(swiss[,input$indepvar], main="Q-Q Plot", xlab=input$indepvar)
         qqline(swiss[,input$indepvar])
-    }, height=300, width=300)
+    })
     
     # Boxplot output
     output$boxplot1 <- renderPlot({
@@ -146,7 +145,7 @@ server <- function(input, output) {
              xlab=input$indepvar, ylab=input$outcome, pch=19)
         abline(lm(swiss[,input$outcome] ~ swiss[,input$indepvar]), col="red")
         lines(lowess(swiss[,input$indepvar],swiss[,input$outcome]), col="blue")
-    }, height=400)
+    })
     
     # Logistisches Regressionsmodell
     output$logreg <- renderPrint({
@@ -163,7 +162,7 @@ server <- function(input, output) {
       plot(swiss[,input$outcome] ~ swiss[,input$indepvar] ,data=swiss, ylab = input$outcome, xlab = input$indepvar)
       abline(fit,col="red")
       crPlots(fit)
-    }, height=300, width=300)
+    })
     
     # ANOVA
     output$anova <- renderText({
@@ -191,12 +190,12 @@ server <- function(input, output) {
     # Histogram output var 1
     output$distribution1 <- renderPlot({
         hist(swiss[,input$outcome], main="", xlab=input$outcome)
-    }, height=300, width=300)
+    })
     
     # Histogram output var 2
     output$distribution2 <- renderPlot({
         hist(swiss[,input$indepvar], main="", xlab=input$indepvar)
-    }, height=300, width=300)
+    })
     
     
     output$residuals <- renderPlot({
