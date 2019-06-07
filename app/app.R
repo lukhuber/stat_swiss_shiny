@@ -53,7 +53,9 @@ ui <- fluidPage(
                         tabPanel("Boxplot", # BoxPlot
                                  fluidRow(
                                      column(6, plotOutput("boxplot1")),
-                                     column(6, plotOutput("boxplot2")))), 
+                                     column(6, plotOutput("boxplot2")),
+                                     column(6, verbatimTextOutput("summary_vars")),
+                                     column(6, verbatimTextOutput("summary_vars2")))), 
                         
                         tabPanel("Scatterplot", plotOutput("scatterplot")), # Scatterplot
                         tabPanel("Linear Regression Model", 
@@ -86,12 +88,24 @@ server <- function(input, output) {
     lm(swiss[,input$outcome] ~ swiss[,input$indepvar], data = swiss)
   })
   
+  
     # Regression output
     output$summary <- renderPrint({
-        fit <- reactive({lm(swiss[,input$outcome] ~ swiss[,input$indepvar])})
+        fit <- lm(swiss[,input$outcome] ~ swiss[,input$indepvar])
         names(fit$coefficients) <- c("Intercept", input$var2)
         summary(fit)
     })
+    
+    output$summary_vars <- renderPrint({
+      x <- swiss[,input$outcome]
+      summary(x)
+    })
+    
+    output$summary_vars2 <- renderPrint({
+      y <- swiss[,input$indepvar]
+      summary(y)
+    })
+    
     
     # Regression plots
     output$lmplot <- renderPlot({
@@ -120,11 +134,11 @@ server <- function(input, output) {
     # Boxplot output
     output$boxplot1 <- renderPlot({
         boxplot(swiss[,input$outcome], main="Boxplot", xlab=input$outcome)
-    }, height=300, width=300)
+    })
     
     output$boxplot2 <- renderPlot({
         boxplot(swiss[,input$indepvar], main="Boxplot", xlab=input$indepvar)
-    }, height=300, width=300)
+    })
     
     # Scatterplot output
     output$scatterplot <- renderPlot({
