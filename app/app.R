@@ -47,17 +47,20 @@ ui <- fluidPage(
                                      column(6, plotOutput("boxplot1")),
                                      column(6, plotOutput("boxplot2")))), 
                         tabPanel("Scatterplot", plotOutput("scatterplot")), # Scatterplot
-                        tabPanel("LM plot", plotOutput("lmplot")), # Plot
+                        tabPanel("LM plot", 
+                                 fluidRow(
+                                   column(6,plotOutput("lmplot")),
+                                   column(6, plotOutput("linreg")))), # LM Plot
                         #tabPanel("ANOVA", plotOutput("anova")), # Plot
                         tabPanel("Distribution", # Plots of distributions
                                  fluidRow(
                                      column(6, plotOutput("distribution1")),
                                      column(6, plotOutput("distribution2")))
                         ),
-                        tabPanel("Model Summary", verbatimTextOutput("summary")), # Regression output
+                        tabPanel("Model summary", verbatimTextOutput("summary")), # Regression output
                         tabPanel("Data", DT::dataTableOutput('tbl')), # Data as datatable
-                        tabPanel("Logistic Regressionmodel", verbatimTextOutput('logreg')), # Logistisches Regressionsmodell
-                        tabPanel("Linear Regressionmodel", plotOutput("linreg")) # Lineares Regressionsmodell
+                        tabPanel("Logistic regression model", verbatimTextOutput('logreg')) # Logistisches Regressionsmodell
+                        #tabPanel("Linear Regressionmodel", plotOutput("linreg")) # Lineares Regressionsmodell
             )
         )
     ))
@@ -78,7 +81,9 @@ server <- function(input, output) {
     output$lmplot <- renderPlot({
         fit <- lm(swiss[,input$outcome] ~ swiss[,input$indepvar])
         plot(fit)
-    })
+        plot(fit)
+
+    }, height=300, width=300)
     
     # Data output
     output$tbl = DT::renderDataTable({
@@ -128,7 +133,7 @@ server <- function(input, output) {
       plot(swiss[,input$outcome] ~ swiss[,input$indepvar] ,data=swiss, ylab = input$outcome, xlab = input$indepvar)
       abline(fit,col="red")
       crPlots(fit)
-    }, height=600, width=600)
+    }, height=300, width=300)
     
     # ANOVA
     output$anova <- renderText({
