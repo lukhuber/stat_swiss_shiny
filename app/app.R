@@ -56,38 +56,23 @@ ui <- fluidPage(
                                      column(6, plotOutput("boxplot2")))), 
                         
                         tabPanel("Scatterplot", plotOutput("scatterplot")), # Scatterplot
-<<<<<<< HEAD
-                        tabPanel("LM", 
+                        tabPanel("Linear Regression Model", 
                                  fluidRow(
                                    column(6,plotOutput("lmplot")),
                                    column(6, plotOutput("linreg")),
                                    column(12, plotOutput("residuals")))), # LM Plot
-=======
-                        
-                        tabPanel("Linear Regression Model", 
-                                 fluidRow(
-                                   column(6,plotOutput("lmplot")),
-                                   column(6, plotOutput("linreg")))), # LM Plot
-                        
->>>>>>> 39adfe75a8e31599f5e3737a2e70593b2e548cdf
+
                         #tabPanel("ANOVA", plotOutput("anova")), # Plot
-                        
+                      
                         tabPanel("Distribution", # Plots of distributions
                                  fluidRow(
                                      column(6, plotOutput("distribution1")),
-                                     column(6, plotOutput("distribution2")))
-                        ),
+                                     column(6, plotOutput("distribution2")))),
                         
                         tabPanel("Model Summary", verbatimTextOutput("summary")), # Regression output
-                        
                         tabPanel("Data", DT::dataTableOutput('tbl')), # Data as datatable
-<<<<<<< HEAD
                         tabPanel("Logistic regression model", verbatimTextOutput('logreg')), # Logistisches Regressionsmodell
                         tabPanel("Linear Regressionmodel", plotOutput("scatter")) # Lineares Regressionsmodell
-=======
-                        
-                        tabPanel("Logistic Regression Model", verbatimTextOutput('logreg')) # Logistisches Regressionsmodell
->>>>>>> 39adfe75a8e31599f5e3737a2e70593b2e548cdf
             )
         )
     ))
