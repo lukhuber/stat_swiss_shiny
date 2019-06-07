@@ -37,7 +37,8 @@ ui <- fluidPage(
             conditionalPanel(condition = "input.tabs == 'Linear Regression Model'",
                              div(id='tab1_sidebar',
                                  radioButtons("type", "Select transformation type:",
-                                                 list("Logarithmic" = "log",
+                                                 list("None" = "none",
+                                                      "Logarithmic" = "log",
                                                       "Exponentially" = "exp")))
             )
         ),
@@ -85,9 +86,20 @@ ui <- fluidPage(
 server <- function(input, output) {
     
   lmResults <- reactive({
-    lm(swiss[,input$outcome] ~ swiss[,input$indepvar], data = swiss)
+    y <- swiss[,input$outcome]
+    x <- swiss[,input$indepvar]
+    if(input$type=="log"){
+      x <- log(x)
+      y <- log(y)
+    }
+    if(input$type=="exp"){
+      x <- exp(x)
+      y <- exp(y)
+    }
+    
+    lm(y ~ x, data = swiss)
   })
-  
+
   
     # Regression output
     output$summary <- renderPrint({
@@ -109,8 +121,7 @@ server <- function(input, output) {
     
     # Regression plots
     output$lmplot <- renderPlot({
-        fit <- lm(swiss[,input$outcome] ~ swiss[,input$indepvar])
-        plot(fit)
+        plot(lmResults())
 
     })
     
@@ -158,10 +169,10 @@ server <- function(input, output) {
     
     # Lineares Regressionsmodell
     output$linreg <- renderPlot({
-      fit <- lm(swiss[,input$outcome] ~ swiss[,input$indepvar], data = swiss)
-      plot(swiss[,input$outcome] ~ swiss[,input$indepvar] ,data=swiss, ylab = input$outcome, xlab = input$indepvar)
-      abline(fit,col="red")
-      crPlots(fit)
+      #fit <- lm(y ~ x, data = swiss)
+      #plot(lmResults(), ylab = input$outcome, xlab = input$indepvar)
+      #abline(fit,col="red")
+      crPlots(lmResults())
     })
     
     # ANOVA
