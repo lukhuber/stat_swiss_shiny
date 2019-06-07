@@ -3,9 +3,14 @@
 ##    Besser waere, wenn man keinen Slider sondern ein Textfeld verwenden wuerde. Oder keinen Minimalwert
 ##    mit dem Slider angeben kann.
 ##  - Fuer Punkt 2 fehlt noch die Moeglichkeit zur Qualitaetsueberpruefung des linearen Regressionsmodell
+##  - LM Plots in selben Reiter     
+##  - Transformation der Variablen einbauen
+##  - Summary mit MW, SD, IQR, etc.?
+##  - Plots für Verteilung der Residuen bei Regression?
 
 library(shiny)
 library(maptools)
+library(car)
 ui <- fluidPage(
     titlePanel("Regression Model (Dataset: Swiss)"),
     sidebarLayout(
