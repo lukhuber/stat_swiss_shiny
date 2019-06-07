@@ -9,6 +9,7 @@ library(car)
 #packages die aus dem neuen copypaste code benötigt werden - kann man denk ich noch rauscoden
 library(plotrix)
 library(openintro)
+library(gridExtra)
 
 ui <- fluidPage(
     titlePanel("Regression Model (Dataset: Swiss)"),
@@ -21,6 +22,7 @@ ui <- fluidPage(
                                        "Examination" = "Examination",
                                        "Catholic" = "Catholic",
                                        "Infant.Mortality" = "Infant.Mortality"), selected = 1),
+            
             
             selectInput("indepvar", label = h3("Explanatory variable"),
                         choices = list("Fertility" = "Fertility",
@@ -40,7 +42,10 @@ ui <- fluidPage(
                                  radioButtons("type", "Select transformation type:",
                                                  list("None" = "none",
                                                       "Logarithmic" = "log",
-                                                      "Exponentially" = "exp")))
+                                                      "Exponentially" = "exp")),
+                                 checkboxInput("donum1", "Make #1 plot", value = T),
+                                 checkboxInput("donum2", "Make #2 plot", value = F),
+                                 checkboxInput("donum3", "Make #3 plot", value = F))
             )
         ),
         
@@ -64,7 +69,8 @@ ui <- fluidPage(
                                  fluidRow(
                                    column(6,plotOutput("lmplot")),
                                    column(6, plotOutput("linreg")),
-                                   column(12, plotOutput("residuals")))), # LM Plot
+                                   column(12, plotOutput("residuals")),
+                                   column(12, plotOutput("plotgraph")))), # LM Plot
 
                         #tabPanel("ANOVA", plotOutput("anova")), # Plot
                       
@@ -85,7 +91,31 @@ ui <- fluidPage(
 
 # SERVER
 server <- function(input, output) {
+  set.seed(123)
+  pt1 <- reactive({
+    if (!input$donum1) return(NULL)
+    qplot(rnorm(500),fill=I("red"),binwidth=0.2,main="plotgraph1")
+  })
+  pt2 <- reactive({
+    if (!input$donum2) return(NULL)
+    qplot(rnorm(500),fill=I("blue"),binwidth=0.2,main="plotgraph2")
+  })
+  pt3 <- reactive({
+    if (!input$donum3) return(NULL)
+    qplot(rnorm(500),fill=I("green"),binwidth=0.2,main="plotgraph3")
+  })
+  output$plotgraph = renderPlot({
+    ptlist <- list(pt1(),pt2(),pt3())
+    wtlist <- c(input$wt1,input$wt2,input$wt3)
+    # remove the null plots from ptlist and wtlist
+    to_delete <- !sapply(ptlist,is.null)
+    ptlist <- ptlist[to_delete] 
+    wtlist <- wtlist[to_delete]
+    if (length(ptlist)==0) return(NULL)
     
+    grid.arrange(grobs=ptlist,widths=wtlist,ncol=length(ptlist))
+  })
+  
   lmResults <- reactive({
     y <- swiss[,input$outcome]
     x <- swiss[,input$indepvar]
