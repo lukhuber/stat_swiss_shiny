@@ -1,16 +1,14 @@
 ## TODO: 
-##  - Der Slider in der Sidebar kann auch einen Minimalwert annehmen. Dies sollte nicht moeglich sein.
-##    Besser waere, wenn man keinen Slider sondern ein Textfeld verwenden wuerde. Oder keinen Minimalwert
-##    mit dem Slider angeben kann.
 ##  - Fuer Punkt 2 fehlt noch die Moeglichkeit zur Qualitaetsueberpruefung des linearen Regressionsmodell
 ##  - LM Plots in selben Reiter     
-##  - Transformation der Variablen einbauen
+##  - Transformation der Variablen in Berechnungscode implementieren
 ##  - Summary mit MW, SD, IQR, etc.?
 ##  - Plots für Verteilung der Residuen bei Regression?
 
 library(shiny)
 library(maptools)
 library(car)
+
 ui <- fluidPage(
     titlePanel("Regression Model (Dataset: Swiss)"),
     sidebarLayout(
@@ -30,38 +28,66 @@ ui <- fluidPage(
                                        "Education" = "Education",
                                        "Catholic" = "Catholic",
                                        "Infant.Mortality" = "Infant.Mortality"), selected = 1),
-            sliderInput("prob", label = "Max. Wahrscheinlichkeit [%]:", min = 1, max = 100, value = c(1, 100))
             
+            conditionalPanel(condition = "input.tabs == 'Logistic Regression Model'",
+                             div(id='tab1_sidebar',
+                                 sliderInput('prob', label = 'Wahrscheinlichkeit', min = 0, max = 100, value = 70))
+            ),
+            
+            conditionalPanel(condition = "input.tabs == 'Linear Regression Model'",
+                             div(id='tab1_sidebar',
+                                 radioButtons("type", "Select transformation type:",
+                                                 list("Logarithmic" = "log",
+                                                      "Exponentially" = "exp")))
+            )
         ),
         
         mainPanel(
-            
-            tabsetPanel(type = "tabs",
+            tabsetPanel(id = "tabs", type = "tabs",
                         
                         tabPanel("QQ-plot",  # QQPlot
                                  fluidRow(
                             column(6, plotOutput("qqplot1")),
                             column(6, plotOutput("qqplot2")))),
+                        
                         tabPanel("Boxplot", # BoxPlot
                                  fluidRow(
                                      column(6, plotOutput("boxplot1")),
                                      column(6, plotOutput("boxplot2")))), 
+                        
                         tabPanel("Scatterplot", plotOutput("scatterplot")), # Scatterplot
+<<<<<<< HEAD
                         tabPanel("LM", 
                                  fluidRow(
                                    column(6,plotOutput("lmplot")),
                                    column(6, plotOutput("linreg")),
                                    column(12, plotOutput("residuals")))), # LM Plot
+=======
+                        
+                        tabPanel("Linear Regression Model", 
+                                 fluidRow(
+                                   column(6,plotOutput("lmplot")),
+                                   column(6, plotOutput("linreg")))), # LM Plot
+                        
+>>>>>>> 39adfe75a8e31599f5e3737a2e70593b2e548cdf
                         #tabPanel("ANOVA", plotOutput("anova")), # Plot
+                        
                         tabPanel("Distribution", # Plots of distributions
                                  fluidRow(
                                      column(6, plotOutput("distribution1")),
                                      column(6, plotOutput("distribution2")))
                         ),
-                        tabPanel("Model summary", verbatimTextOutput("summary")), # Regression output
+                        
+                        tabPanel("Model Summary", verbatimTextOutput("summary")), # Regression output
+                        
                         tabPanel("Data", DT::dataTableOutput('tbl')), # Data as datatable
+<<<<<<< HEAD
                         tabPanel("Logistic regression model", verbatimTextOutput('logreg')), # Logistisches Regressionsmodell
                         tabPanel("Linear Regressionmodel", plotOutput("scatter")) # Lineares Regressionsmodell
+=======
+                        
+                        tabPanel("Logistic Regression Model", verbatimTextOutput('logreg')) # Logistisches Regressionsmodell
+>>>>>>> 39adfe75a8e31599f5e3737a2e70593b2e548cdf
             )
         )
     ))
@@ -126,7 +152,7 @@ server <- function(input, output) {
     # Logistisches Regressionsmodell
     output$logreg <- renderPrint({
       recode <- swiss[,input$outcome]
-      recode[recode>input$prob[2]] <- 1
+      recode[recode>input$prob[1]] <- 1
       recode[recode>1] <- 0
       logistic_model <- glm(recode ~ swiss[,input$indepvar], data = swiss, family = binomial)
       summary(logistic_model)
