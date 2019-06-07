@@ -2,12 +2,13 @@
 ##  - Fuer Punkt 2 fehlt noch die Moeglichkeit zur Qualitaetsueberpruefung des linearen Regressionsmodell
 ##  - LM Plots in selben Reiter     
 ##  - Transformation der Variablen in Berechnungscode implementieren
-##  - Summary mit MW, SD, IQR, etc.?
-##  - Plots für Verteilung der Residuen bei Regression?
 
 library(shiny)
 library(maptools)
 library(car)
+#packages die aus dem neuen copypaste code benötigt werden - kann man denk ich noch rauscoden
+library(plotrix)
+library(openintro)
 
 ui <- fluidPage(
     titlePanel("Regression Model (Dataset: Swiss)"),
@@ -108,6 +109,7 @@ server <- function(input, output) {
         summary(fit)
     })
     
+    # Summary Text
     output$summary_vars <- renderPrint({
       x <- swiss[,input$outcome]
       summary(x)
@@ -121,7 +123,10 @@ server <- function(input, output) {
     
     # Regression plots
     output$lmplot <- renderPlot({
-        plot(lmResults())
+      plot(lmResults())
+      #plot(lmResults(), which=2)
+      #plot(lmResults(), which=3)
+      #plot(lmResults(), which=4)
 
     })
     
@@ -159,6 +164,7 @@ server <- function(input, output) {
     })
     
     # Logistisches Regressionsmodell
+    # mit Pima Indians machen! Bestimmen ob eine Frau Diabetes bekommen wird ja/nein -> neue app?
     output$logreg <- renderPrint({
       recode <- swiss[,input$outcome]
       recode[recode>input$prob[1]] <- 1
