@@ -1,4 +1,6 @@
 ## TODO: 
+##  - Variablenauswahl auf alle (nicht nur 2) ausweiten - am besten einfach mit Checkbox/Radiobuttons
+##  - Logistische Regression mit Pima Indians - gibt R Vorlagen davon 
 ##  - Fuer Punkt 2 fehlt noch die Moeglichkeit zur Qualitaetsueberpruefung des linearen Regressionsmodell
 ##  - LM Plots in selben Reiter     
 ##  - Transformation der Variablen in Berechnungscode implementieren
