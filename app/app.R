@@ -225,7 +225,7 @@ server <- function(input, output) {
   ## Modellzusammenfassung
   ## ---
   output$summary <- renderPrint({
-    fit <- lm(swiss[,input$outcome_exp] ~ swiss[,input$indepvar_exp])
+    fit <- lm(swiss[,input$outcome] ~ swiss[,input$indepvar])
     names(fit$coefficients) <- c("Intercept", input$var2)
     summary(fit)
   })
