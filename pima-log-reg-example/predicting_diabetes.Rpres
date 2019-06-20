@@ -1,0 +1,125 @@
+Predicting Diabetes using the Pima Indian Diabetes Dataset
+========================================================
+author: Michael Nichols
+date: 4/6/18
+autosize: true
+
+
+Application Overview
+========================================================
+Shiny application to predict probability an individual would receive a positive diabetes diagnosis.
+
+Highlights:
+- 81% accuracy logistic regression model
+```{r, echo=FALSE}
+library(mlbench) # for Pima Indian Diabetes dataset
+library(caret) # for prediction building functions
+library(dplyr)
+library(ggplot2)
+library(e1071)
+
+#load and rename pima data frame
+data(PimaIndiansDiabetes)
+pima <- PimaIndiansDiabetes
+
+#clarify meaning of the lone factor variable, and target of our analysis, diabetes
+pima$diabetes <- factor(pima$diabetes, labels = c("Neg", "Pos"))
+
+#set seed and split dataset for predictions
+set.seed(25)
+
+#create 70/30 split for model training
+inTrain <- createDataPartition(pima$diabetes, p = .7, list = FALSE) 
+pimaTrain <- pima[inTrain,]
+pimaTest <- pima[-inTrain,]
+
+#train the model using logistic regression
+modFit_GLM <- train(diabetes ~., data = pimaTrain, method = "glm")
+
+#predict on the test set
+predictions <- predict(modFit_GLM,newdata=pimaTest)
+
+#create DF of prediction probs
+predictionsProbs <- as.data.frame(predict(modFit_GLM,newdata=pimaTest, 
+                                          type="prob", se=TRUE))
+
+#display accuracy
+confusionmatrix_diabetes <- caret::confusionMatrix(pimaTest$diabetes, predictions)
+
+confusionmatrix_diabetes$table
+```
+- Dynamic probability calculation based on numeric input of the probability an individual would receive a positive diabetes diagnosis
+- 3-tab collection of model visualizations
+
+Tutorial
+========================================================
+## How to determine the probability an individual would receive a positive diabetes diagnosis:
+
+- Input the following variables into the numeric input boxes listed below: Number of times pregnant, Plasma glucose concentration (2 hours in an oral glucose tolerance test), Diastolic blood pressure (mm Hg), Triceps skin fold thickness (mm), insulin (mu U/ml), Body mass index, Age (years), Diabetes Pedigree Function (DPF)
+
+- For unknown information, default values have been provided to still enable a rough estimate prediction.
+
+- View the percentage probability of a likelihood of a positive diabetes diagnosis. The percentage is dynamic and will update according as the information changes.
+
+Model Visualizations
+========================================================
+
+1. Reactive Plot: dynamically assigned best fit line
+2. Glucose Relationship: glucose vs prediction prob (below)
+```{r, echo=FALSE, fig.width=9,fig.height=3,out.height="400px"}
+library(mlbench) # for Pima Indian Diabetes dataset
+library(caret) # for prediction building functions
+library(dplyr)
+library(ggplot2)
+library(e1071)
+
+#load and rename pima data frame
+data(PimaIndiansDiabetes)
+pima <- PimaIndiansDiabetes
+
+#clarify meaning of the lone factor variable, and target of our analysis, diabetes
+pima$diabetes <- factor(pima$diabetes, labels = c("Neg", "Pos"))
+
+#set seed and split dataset for predictions
+set.seed(25)
+
+#create 70/30 split for model training
+inTrain <- createDataPartition(pima$diabetes, p = .7, list = FALSE) 
+pimaTrain <- pima[inTrain,]
+pimaTest <- pima[-inTrain,]
+
+#train the model using logistic regression
+modFit_GLM <- train(diabetes ~., data = pimaTrain, method = "glm")
+
+#predict on the test set
+predictions <- predict(modFit_GLM,newdata=pimaTest)
+
+#create DF of prediction probs
+predictionsProbs <- as.data.frame(predict(modFit_GLM,newdata=pimaTest, 
+                                          type="prob", se=TRUE))
+
+#combine probability column to test set
+pimaWpredictions <- cbind(pimaTest, predictionsProbs$Pos)
+
+#rename column with probability
+names(pimaWpredictions)[names(pimaWpredictions) == 'predictionsProbs$Pos'] <- "Prediction_Probability"
+
+ggplot(pimaWpredictions, aes(x = glucose, y = Prediction_Probability, color = diabetes)) +
+                        geom_point(alpha = .7) + 
+                        scale_colour_brewer(palette = "Dark2") +
+                        stat_smooth(method = loess, data = subset(pimaWpredictions, diabetes == 'Pos')) +
+                        xlab("Plasma Glucose Levels") +
+                        ylab("Model's Prediction Probability") +
+                        ggtitle("Glucose Levels vs Model Diabetes Prediction Probability")
+
+```
+3. Variable Importance Plot
+
+Where to Access
+========================================================
+Application hosted on Shiny server at:
+
+https://michaelnichols16.shinyapps.io/predicting_diabetes_coursera/
+
+Code can be found at Github here:
+https://github.com/mnicho03/Shiny-App-Reproducible-Pitch
