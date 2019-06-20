@@ -145,12 +145,23 @@ ui <- fluidPage(
                            tabsetPanel(id = "tabs_reg", type = "tabs",
                                        tabPanel("Linear Regression Model", 
                                                 fluidRow(
-                                                  column(6,plotOutput("lmplot")),
-                                                  column(6, plotOutput("linreg")),
+                                                  print(h4("LM Plots")),
+                                                  column(3,plotOutput("lmplot1")),
+                                                  column(3,plotOutput("lmplot2")),
+                                                  column(3,plotOutput("lmplot3")),
+                                                  column(3,plotOutput("lmplot4")),
+                                                  
+                                                  print(h4("Linear Regression")),
+                                                  column(12, plotOutput("linreg")),
+                                                  
+                                                  print(h4("Residuals")),
                                                   column(12, plotOutput("residuals")),
+                                                  
+                                                  print(h4("Plotgraph")),
                                                   column(12, plotOutput("plotgraph")))),
                                        
-                                       tabPanel("Logistic Regression Model", verbatimTextOutput('logreg'))
+                                       tabPanel("Logistic Regression Model", 
+                                                  verbatimTextOutput('logreg'))
                            )
                   )
       )
@@ -233,12 +244,20 @@ server <- function(input, output) {
   ## ---
   ## Regressions Plots
   ## ---
-  output$lmplot <- renderPlot({
+  output$lmplot1 <- renderPlot({
     plot(lmResults())
-    #plot(lmResults(), which=2)
-    #plot(lmResults(), which=3)
-    #plot(lmResults(), which=4)
-    
+  })
+  
+  output$lmplot2 <- renderPlot({
+    plot(lmResults(), which=2)
+  })
+  
+  output$lmplot3 <- renderPlot({
+    plot(lmResults(), which=3)
+  })
+  
+  output$lmplot4 <- renderPlot({
+    plot(lmResults(), which=4)
   })
   
   ## ---
