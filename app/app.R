@@ -4,6 +4,7 @@
 ##  - Fuer Punkt 2 fehlt noch die Moeglichkeit zur Qualitaetsueberpruefung des linearen Regressionsmodell
 ##  - LM Plots in selben Reiter     
 ##  - Transformation der Variablen in Berechnungscode implementieren
+##  - Alle Plots unter "Regressions" können noch nicht damit umgehen, wenn mehr als jeweils 1 Variable in der Auswahl markiert wird.
 
 library(shiny)
 library(maptools)
@@ -17,7 +18,7 @@ library(gridExtra)
 ## AUFBAU DES LAYOUTS
 ## ---
 ui <- fluidPage(
-  titlePanel("Regression Model (Dataset: Swiss)"),
+  titlePanel("Spezielle Statistik Übung, Dataset: Swiss | HUBER, VIEHBÖCK"),
   
   ## ---
   ## Sidebar
@@ -26,31 +27,56 @@ ui <- fluidPage(
     sidebarPanel(
       
       ## ---
-      ## Dropdownauswahl für 1. Variable
+      ## Dropdownauswahl für 1. Variable (Abhängig von 'navbar')
       ## ---
-      selectInput("outcome", label = h3("Outcome"),
-                  choices = list("Education" = "Education",
-                                 "Fertility" = "Fertility",
-                                 "Agriculture" = "Agriculture",
-                                 "Examination" = "Examination",
-                                 "Catholic" = "Catholic",
-                                 "Infant.Mortality" = "Infant.Mortality"), selected = 1),
+      conditionalPanel(condition = "input.navbar == 'Explorative Data Analysis'",
+                       div(id='tab1_sidebar',
+                           selectInput("outcome_exp", label = h3("1. Variable"),
+                                                    choices = list("Education" = "Education",
+                                                                   "Fertility" = "Fertility",
+                                                                   "Agriculture" = "Agriculture",
+                                                                   "Examination" = "Examination",
+                                                                   "Catholic" = "Catholic",
+                                                                   "Infant.Mortality" = "Infant.Mortality"), selected = 1))),
+      
+      conditionalPanel(condition = "input.navbar == 'Regression'",
+                       div(id='tab1_sidebar',
+                           checkboxGroupInput("outcome", label = h3("1. Variable"),
+                                       choices = list("Education" = "Education",
+                                                      "Fertility" = "Fertility",
+                                                      "Agriculture" = "Agriculture",
+                                                      "Examination" = "Examination",
+                                                      "Catholic" = "Catholic",
+                                                      "Infant.Mortality" = "Infant.Mortality"), selected = "Education"))),
       
       ## ---
-      ## Dropdownauswahl für 2. Variable
+      ## Dropdownauswahl für 2. Variable (Abhängig von 'navbar')
       ## ---
-      selectInput("indepvar", label = h3("Explanatory variable"),
-                  choices = list("Fertility" = "Fertility",
-                                 "Agriculture" = "Agriculture",
-                                 "Examination" = "Examination",
-                                 "Education" = "Education",
-                                 "Catholic" = "Catholic",
-                                 "Infant.Mortality" = "Infant.Mortality"), selected = 1),
+      conditionalPanel(condition = "input.navbar == 'Explorative Data Analysis'",
+                       div(id='tab1_sidebar',
+                           selectInput("indepvar_exp", label = h3("2. Variable"),
+                                       choices = list("Education" = "Education",
+                                                      "Fertility" = "Fertility",
+                                                      "Agriculture" = "Agriculture",
+                                                      "Examination" = "Examination",
+                                                      "Catholic" = "Catholic",
+                                                      "Infant.Mortality" = "Infant.Mortality"), selected = 1))),
+      
+      conditionalPanel(condition = "input.navbar == 'Regression'",
+                       div(id='tab1_sidebar',
+                           checkboxGroupInput("indepvar", label = h3("2. Variable"),
+                                       choices = list("Education" = "Education",
+                                                      "Fertility" = "Fertility",
+                                                      "Agriculture" = "Agriculture",
+                                                      "Examination" = "Examination",
+                                                      "Catholic" = "Catholic",
+                                                      "Infant.Mortality" = "Infant.Mortality"), selected = "Fertility"))),
       
       ## ---
       ## Slide für Wahrscheinlichkeit (wird nur bei log. RM angezeigt)
       ## ---
-      conditionalPanel(condition = "input.tabs_reg == 'Logistic Regression Model'",
+      conditionalPanel(condition = "input.tabs_reg == 'Logistic Regression Model'& 
+                                    input.navbar == 'Regression'" ,
                        div(id='tab1_sidebar',
                            sliderInput('prob', label = 'Wahrscheinlichkeit', min = 0, max = 100, value = 70))
       ),
@@ -58,12 +84,14 @@ ui <- fluidPage(
       ## ---
       ## Auswahl für Transformationstyp und anzuzeigende Plots (nur bei lin. RM angezeigt)
       ## ---
-      conditionalPanel(condition = "input.tabs_reg == 'Linear Regression Model'",
+      conditionalPanel(condition = "input.tabs_reg == 'Linear Regression Model' & 
+                                    input.navbar == 'Regression'",
                        div(id='tab1_sidebar',
-                           radioButtons("type", "Select transformation type:",
+                           radioButtons("type", label = h3("Transformation type:"),
                                         list("None" = "none",
                                              "Logarithmic" = "log",
                                              "Exponentially" = "exp")),
+                           print(h3("Display plots:")),
                            checkboxInput("donum1", "Make #1 plot", value = T),
                            checkboxInput("donum2", "Make #2 plot", value = F),
                            checkboxInput("donum3", "Make #3 plot", value = F))
@@ -122,7 +150,7 @@ ui <- fluidPage(
                                                   column(12, plotOutput("residuals")),
                                                   column(12, plotOutput("plotgraph")))),
                                        
-                                       tabPanel("Logistic regression model", verbatimTextOutput('logreg'))
+                                       tabPanel("Logistic Regression Model", verbatimTextOutput('logreg'))
                            )
                   )
       )
@@ -134,18 +162,22 @@ ui <- fluidPage(
 ## ---
 server <- function(input, output) {
   set.seed(123)
+  
   pt1 <- reactive({
     if (!input$donum1) return(NULL)
-    qplot(rnorm(500),fill=I("red"),binwidth=0.2,main="plotgraph1")
+    qqplot(rnorm(500),fill=I("red"),binwidth=0.2,main="plotgraph1")
   })
+  
   pt2 <- reactive({
     if (!input$donum2) return(NULL)
-    qplot(rnorm(500),fill=I("blue"),binwidth=0.2,main="plotgraph2")
+    qqplot(rnorm(500),fill=I("blue"),binwidth=0.2,main="plotgraph2")
   })
+  
   pt3 <- reactive({
     if (!input$donum3) return(NULL)
-    qplot(rnorm(500),fill=I("green"),binwidth=0.2,main="plotgraph3")
+    qqplot(rnorm(500),fill=I("green"),binwidth=0.2,main="plotgraph3")
   })
+  
   output$plotgraph = renderPlot({
     ptlist <- list(pt1(),pt2(),pt3())
     wtlist <- c(input$wt1,input$wt2,input$wt3)
@@ -173,25 +205,30 @@ server <- function(input, output) {
     lm(y ~ x, data = swiss)
   })
   
-  
-  # Regression output
+  ## ---
+  ## Modellzusammenfassung
+  ## ---
   output$summary <- renderPrint({
-    fit <- lm(swiss[,input$outcome] ~ swiss[,input$indepvar])
+    fit <- lm(swiss[,input$outcome_exp] ~ swiss[,input$indepvar_exp])
     names(fit$coefficients) <- c("Intercept", input$var2)
     summary(fit)
   })
   
-  # Summary Text
+  ## ---
+  ## Zusammenfassung der 1. Variable
+  ## ---
   output$summary_vars <- renderPrint({
-    x <- swiss[,input$outcome]
+    x <- swiss[,input$outcome_exp]
     summary(x)
   })
-  
+
+  ## ---
+  ## Zusammenfassung der 2. Variable
+  ## ---
   output$summary_vars2 <- renderPrint({
-    y <- swiss[,input$indepvar]
+    y <- swiss[,input$indepvar_exp]
     summary(y)
   })
-  
   
   ## ---
   ## Regressions Plots
@@ -215,43 +252,45 @@ server <- function(input, output) {
   ## QQ-Plot der 1. Variable
   ## ---
   output$qqplot1 <- renderPlot({
-    qqnorm(swiss[,input$outcome], main="Q-Q Plot", xlab=input$outcome)
-    qqline(swiss[,input$outcome])
+    qqnorm(swiss[,input$outcome_exp], main="Q-Q Plot", xlab=input$outcome_exp)
+    qqline(swiss[,input$outcome_exp])
   })
   
   ## ---
   ## QQ-Plot der 2. Variable
   ## ---
   output$qqplot2 <- renderPlot({
-    qqnorm(swiss[,input$indepvar], main="Q-Q Plot", xlab=input$indepvar)
-    qqline(swiss[,input$indepvar])
+    qqnorm(swiss[,input$indepvar_exp], main="Q-Q Plot", xlab=input$indepvar_exp)
+    qqline(swiss[,input$indepvar_exp])
   })
   
   ## ---
   ## Boxplot der 1. Variable
   ## ---
   output$boxplot1 <- renderPlot({
-    boxplot(swiss[,input$outcome], main="Boxplot", xlab=input$outcome)
+    boxplot(swiss[,input$outcome_exp], main="Boxplot", xlab=input$outcome_exp)
   })
   
   ## ---
   ## Boxplot der 2. Variable
   ## ---
   output$boxplot2 <- renderPlot({
-    boxplot(swiss[,input$indepvar], main="Boxplot", xlab=input$indepvar)
+    boxplot(swiss[,input$indepvar_exp], main="Boxplot", xlab=input$indepvar_exp)
   })
   
   ## ---
   ## Scatterplots
   ## ---
   output$scatterplot <- renderPlot({
-    plot(swiss[,input$indepvar], swiss[,input$outcome], main="Scatterplot",
-         xlab=input$indepvar, ylab=input$outcome, pch=19)
-    abline(lm(swiss[,input$outcome] ~ swiss[,input$indepvar]), col="red")
-    lines(lowess(swiss[,input$indepvar],swiss[,input$outcome]), col="blue")
+    plot(swiss[,input$indepvar_exp], swiss[,input$outcome_exp], main="Scatterplot",
+         xlab=input$indepvar_exp, ylab=input$outcome_exp, pch=19)
+    abline(lm(swiss[,input$outcome_exp] ~ swiss[,input$indepvar_exp]), col="red")
+    lines(lowess(swiss[,input$indepvar_exp],swiss[,input$outcome_exp]), col="blue")
   })
   
-  # Logistisches Regressionsmodell
+  ## ---
+  ## Logistische Regressionsmodell
+  ## ---
   # mit Pima Indians machen! Bestimmen ob eine Frau Diabetes bekommen wird ja/nein -> neue app?
   output$logreg <- renderPrint({
     recode <- swiss[,input$outcome]
@@ -300,17 +339,19 @@ server <- function(input, output) {
   ## Histogramm der 1. Variable
   ## ---
   output$distribution1 <- renderPlot({
-    hist(swiss[,input$outcome], main="", xlab=input$outcome)
+    hist(swiss[,input$outcome_exp], main="", xlab=input$outcome_exp)
   })
   
   ## ---
   ## Histogramm der 2. Variable
   ## ---
   output$distribution2 <- renderPlot({
-    hist(swiss[,input$indepvar], main="", xlab=input$indepvar)
+    hist(swiss[,input$indepvar_exp], main="", xlab=input$indepvar_exp)
   })
   
-  
+  ## ---
+  ## Residual Plots
+  ## ---
   output$residuals <- renderPlot({
     par(mfrow=c(1,3), cex.main=2, cex.lab=2, cex.axis=2, mar=c(4,5,2,2))
     
@@ -329,7 +370,9 @@ server <- function(input, output) {
     qqline(residuals, col = COL[1], lwd = 2)
   }, height=300)
   
-  # Show plot of points, regression line, residuals
+  ## ---
+  ## Scatterplots
+  ## ---
   output$scatter <- renderPlot({
     
     data1 <- swiss
