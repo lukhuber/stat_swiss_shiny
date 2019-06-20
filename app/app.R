@@ -13,6 +13,7 @@ library(car)
 library(plotrix)
 library(openintro)
 library(gridExtra)
+library(ggplot2)
 
 ## ---
 ## AUFBAU DES LAYOUTS
@@ -98,6 +99,7 @@ ui <- fluidPage(
       )
     ),
     
+
     ## ---
     ## Reiter
     ## ---
@@ -110,11 +112,6 @@ ui <- fluidPage(
                   tabPanel("Explorative Data Analysis",
                            br(),
                            tabsetPanel(id = "tabs_exp", type = "tabs",
-                                       
-                                       tabPanel("QQ-plot",
-                                                fluidRow(
-                                                  column(6, plotOutput("qqplot1")),
-                                                  column(6, plotOutput("qqplot2")))),
                                        
                                        tabPanel("Boxplot",
                                                 fluidRow(
@@ -130,7 +127,12 @@ ui <- fluidPage(
                                                   column(6, plotOutput("distribution1")),
                                                   column(6, plotOutput("distribution2")))),
                                        
-                                       tabPanel("Model Summary", verbatimTextOutput("summary")),
+                                       
+                                       tabPanel("QQ-plot",
+                                                fluidRow(
+                                                  column(6, plotOutput("qqplot1")),
+                                                  column(6, plotOutput("qqplot2")))),
+                                       
                                        
                                        tabPanel("Data", DT::dataTableOutput('tbl'))
                            )
@@ -160,6 +162,8 @@ ui <- fluidPage(
                                                   print(h4("Plotgraph")),
                                                   column(12, plotOutput("plotgraph")))),
                                        
+                                       tabPanel("Model Summary", verbatimTextOutput("summary")),
+                                       
                                        tabPanel("Logistic Regression Model", 
                                                   verbatimTextOutput('logreg'))
                            )
@@ -172,21 +176,22 @@ ui <- fluidPage(
 ## Erstellen der Plots
 ## ---
 server <- function(input, output) {
+  
   set.seed(123)
   
   pt1 <- reactive({
     if (!input$donum1) return(NULL)
-    qqplot(rnorm(500),fill=I("red"),binwidth=0.2,main="plotgraph1")
-  })
+    qplot(rnorm(500),fill=I("red"),binwidth=0.2,main="plotgraph1")
+    })
   
   pt2 <- reactive({
     if (!input$donum2) return(NULL)
-    qqplot(rnorm(500),fill=I("blue"),binwidth=0.2,main="plotgraph2")
+    qplot(rnorm(500),fill=I("blue"),binwidth=0.2,main="plotgraph2")
   })
   
   pt3 <- reactive({
     if (!input$donum3) return(NULL)
-    qqplot(rnorm(500),fill=I("green"),binwidth=0.2,main="plotgraph3")
+    qplot(rnorm(500),fill=I("green"),binwidth=0.2,main="plotgraph3")
   })
   
   output$plotgraph = renderPlot({
