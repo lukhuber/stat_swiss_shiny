@@ -1,10 +1,8 @@
 ## TODO: 
-##  - Variablenauswahl auf alle (nicht nur 2) ausweiten - am besten einfach mit Checkbox/Radiobuttons
 ##  - Logistische Regression mit Pima Indians - gibt R Vorlagen davon 
-##  - Fuer Punkt 2 fehlt noch die Moeglichkeit zur Qualitaetsueberpruefung des linearen Regressionsmodell
-##  - LM Plots in selben Reiter     
-##  - Transformation der Variablen in Berechnungscode implementieren
-##  - Alle Plots unter "Regressions" können noch nicht damit umgehen, wenn mehr als jeweils 1 Variable in der Auswahl markiert wird.
+##  - Mehr Transformationen der Variablen in Berechnungscode implementieren
+##  - LM Plot funktioniert noch nicht mit mehreren Variablen - liegt an der predict Funktion und der neuen lmResults() (Formel sieht anders aus)
+##  - Plots ein/ausblende Funktion ("show plots") besser ausnützen und evt. noch 1, 2 Plots einfügen die zur Erklärung des Modells dienen könnten?
 
 library(shiny)
 library(maptools)
@@ -14,6 +12,7 @@ library(plotrix)
 library(openintro)
 library(gridExtra)
 library(ggplot2)
+#library(shinyWidgets)
 
 ## ---
 ## AUFBAU DES LAYOUTS
@@ -42,13 +41,13 @@ ui <- fluidPage(
       
       conditionalPanel(condition = "input.navbar == 'Regression'",
                        div(id='tab1_sidebar',
-                           checkboxGroupInput("outcome", label = h3("1. Variable"),
-                                       choices = list("Education" = "Education",
+                           checkboxGroupInput("indepvar", label = h3("Variablenauswahl"),
+                                       choices = list(
                                                       "Fertility" = "Fertility",
                                                       "Agriculture" = "Agriculture",
                                                       "Examination" = "Examination",
                                                       "Catholic" = "Catholic",
-                                                      "Infant.Mortality" = "Infant.Mortality"), selected = "Education"))),
+                                                      "Infant.Mortality" = "Infant.Mortality"), selected = "Fertility"))),
       
       ## ---
       ## Dropdownauswahl für 2. Variable (Abhängig von 'navbar')
@@ -62,17 +61,7 @@ ui <- fluidPage(
                                                       "Examination" = "Examination",
                                                       "Catholic" = "Catholic",
                                                       "Infant.Mortality" = "Infant.Mortality"), selected = 1))),
-      
-      conditionalPanel(condition = "input.navbar == 'Regression'",
-                       div(id='tab1_sidebar',
-                           checkboxGroupInput("indepvar", label = h3("2. Variable"),
-                                       choices = list("Education" = "Education",
-                                                      "Fertility" = "Fertility",
-                                                      "Agriculture" = "Agriculture",
-                                                      "Examination" = "Examination",
-                                                      "Catholic" = "Catholic",
-                                                      "Infant.Mortality" = "Infant.Mortality"), selected = "Fertility"))),
-      
+
       ## ---
       ## Slide für Wahrscheinlichkeit (wird nur bei log. RM angezeigt)
       ## ---
@@ -85,8 +74,7 @@ ui <- fluidPage(
       ## ---
       ## Auswahl für Transformationstyp und anzuzeigende Plots (nur bei lin. RM angezeigt)
       ## ---
-      conditionalPanel(condition = "input.tabs_reg == 'Linear Regression Model' & 
-                                    input.navbar == 'Regression'",
+      conditionalPanel(condition = "input.navbar == 'Regression'",
                        div(id='tab1_sidebar',
                            radioButtons("type", label = h3("Transformation type:"),
                                         list("None" = "none",
@@ -153,16 +141,18 @@ ui <- fluidPage(
                                                   column(3,plotOutput("lmplot3")),
                                                   column(3,plotOutput("lmplot4")),
                                                   
-                                                  print(h4("Linear Regression")),
-                                                  column(12, plotOutput("linreg")),
-                                                  
-                                                  print(h4("Residuals")),
-                                                  column(12, plotOutput("residuals")),
-                                                  
                                                   print(h4("Plotgraph")),
                                                   column(12, plotOutput("plotgraph")))),
                                        
+                                       tabPanel("Residuals", 
+                                                print(h4("Residual plots")),
+                                                column(12, plotOutput("linreg")),
+                                                column(12, plotOutput("residuals"))
+                                       ),
+                                       
                                        tabPanel("Model Summary", verbatimTextOutput("summary")),
+                                       
+                                       tabPanel("LM plot", plotOutput("scatter")), # Lineares Regressionsmodell
                                        
                                        tabPanel("Logistic Regression Model", 
                                                   verbatimTextOutput('logreg'))
@@ -207,7 +197,30 @@ server <- function(input, output) {
   })
   
   lmResults <- reactive({
-    y <- swiss[,input$outcome]
+    y <- swiss$Education
+    x <- swiss[,input$indepvar]
+    #data <- data[data$vars %in% input$indepvar,]
+    swissdata <- swiss
+    
+    if(input$type=="log"){
+      x <- log(x)
+      y <- log(y)
+      swissdata <- log(swissdata)
+    }
+    if(input$type=="exp"){
+      x <- exp(x)
+      y <- exp(y)
+      swissdata <- exp(swissdata)
+    }
+    predictors <- paste(input$indepvar,collapse="+")
+    fml <- as.formula(paste("Education", " ~ ", paste(predictors, collapse="+")))
+    print(fml)
+    lm(fml, data=swissdata)
+  })
+  
+  # Alte Version - dadurch funktionieren paar plots
+  lmResults_old <- reactive({
+    y <- swiss[,input$outcome_exp]
     x <- swiss[,input$indepvar]
     if(input$type=="log"){
       x <- log(x)
@@ -225,9 +238,9 @@ server <- function(input, output) {
   ## Modellzusammenfassung
   ## ---
   output$summary <- renderPrint({
-    fit <- lm(swiss[,input$outcome] ~ swiss[,input$indepvar])
-    names(fit$coefficients) <- c("Intercept", input$var2)
-    summary(fit)
+    #fit <- lm(swiss[,input$outcome] ~ swiss[,input$indepvar])
+    #names(fit$coefficients) <- c("Intercept", input$var2)
+    summary(lmResults())
   })
   
   ## ---
@@ -378,13 +391,14 @@ server <- function(input, output) {
   ## ---
   output$residuals <- renderPlot({
     par(mfrow=c(1,3), cex.main=2, cex.lab=2, cex.axis=2, mar=c(4,5,2,2))
-    
+
     residuals = summary(lmResults())$residuals
-    predicted = predict(lmResults(), newdata = data.frame(x=swiss[,input$outcome]))
-    plot(residuals ~ predicted, 
-         main="Residuals vs. Fitted Values", xlab="Fitted Values", ylab="Residuals", 
-         pch=19, col = COL[1,2])
-    abline(h = 0, lty = 2)
+    #predicted = predict(lmResults_old(), newdata = data.frame(x=swiss[,"Education"]))
+    #print(predicted)
+    #plot(residuals ~ predicted, 
+    #     main="Residuals vs. Fitted Values", xlab="Fitted Values", ylab="Residuals", 
+    #     pch=19, col = COL[1,2])
+    #abline(h = 0, lty = 2)
     d = density(residuals)$y
     h = hist(residuals, plot = FALSE)
     hist(residuals, main="Histogram of Residuals", xlab="Residuals", 
@@ -395,25 +409,25 @@ server <- function(input, output) {
   }, height=300)
   
   ## ---
-  ## Scatterplots
+  ## LM Plot 2 - TODO: FUNKTIONIERT NOCH NICHT RICHTIG, AUF MEHRERE VARIABLEN AUSDEHEN!
   ## ---
   output$scatter <- renderPlot({
     
     data1 <- swiss
-    x <- swiss[,input$outcome]
-    y <- swiss[,input$indepvar]
+    y <- swiss[,input$outcome_exp]
+    x <- swiss[,input$indepvar_exp]
     
     #used for confidence interval
     xcon <- seq(min(x)-.1, max(x)+.1, .025)
     
     predictor <- data.frame(x=xcon)
     
-    yhat <- predict(lmResults())    
-    yline <- predict(lmResults(), predictor)
+    yhat <- predict(lmResults_old())    
+    yline <- predict(lmResults_old(), predictor)
     
     par(cex.main=1.5, cex.lab=1.5, cex.axis=1.5, mar = c(4,4,4,1))
     
-    r.squared = round(summary(lmResults())$r.squared, 4)
+    r.squared = round(summary(lmResults_old())$r.squared, 4)
     corr.coef = round(sqrt(r.squared), 4)
     
     plot(c(min(x),max(x)),c(min(y,yline),max(y,yline)), 
@@ -424,9 +438,9 @@ server <- function(input, output) {
     
     
     newx <- seq(min(x), max(x), length.out=400)
-    confs <- predict(lmResults(), newdata = data.frame(x=newx), 
+    confs <- predict(lmResults_old(), newdata = data.frame(x=newx), 
                      interval = 'confidence')
-    preds <- predict(lmResults(), newdata = data.frame(x=newx), 
+    preds <- predict(lmResults_old(), newdata = data.frame(x=newx), 
                      interval = 'predict')
     
     polygon(c(rev(newx), newx), c(rev(preds[ ,3]), preds[ ,2]), col = grey(.95), border = NA)
@@ -436,7 +450,7 @@ server <- function(input, output) {
     # hier kommt fehler
     lines(xcon, yline, lwd=2, col=COL[1])
     
-    legend_pos = ifelse(lmResults()$coefficients[1] < 1, "topleft", "topright")
+    legend_pos = ifelse(lmResults_old()$coefficients[1] < 1, "topleft", "topright")
     legend(legend_pos, inset=.05,
            legend=c("Regression Line", "Confidence Interval", "Prediction Interval"), 
            fill=c(COL[1],grey(.75),grey(.95)))
