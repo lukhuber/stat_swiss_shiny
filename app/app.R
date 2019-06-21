@@ -99,17 +99,17 @@ ui <- fluidPage(
       ## ---
       ## Auswahl für Pima Indians
       ## ---
-      conditionalPanel(condition = "input.navbar == 'Pima Indians",
+      conditionalPanel(condition = "input.navbar == 'Pima Indians'",
                                h2("Measurements"),
                                p("Enter information into the fields below to view the probablity of a positive diagnosis."),
-                               numericInput('pregnant', 'Number of times pregnant', value = 0),
-                               numericInput('glucose', 'Plasma glucose concentration (2 hours in an oral glucose tolerance test)', value = 120),
-                               numericInput('pressure', 'Diastolic blood pressure (mm Hg)', value = 70),
-                               numericInput('triceps', 'Triceps skin fold thickness (mm)', value = 30),
-                               numericInput('insulin', '2-Hour serum insulin (mu U/ml)', value = 125),
-                               numericInput('mass', 'Body mass index (kg/(height in m)^2)', value = 25),
-                               numericInput('age', 'Age (years)', value = 35),
-                               numericInput('pedigree', 'Diabetes Pedigree Function (DPF)*', value = .5))
+                               numericInput('pregnant', 'Number of pregnancies', value = 0),
+                               numericInput('glucose', 'Plasma glucose concentration [mmol/L]', value = 120),
+                               numericInput('pressure', 'Diastolic blood pressure [mm Hg]', value = 70),
+                               numericInput('triceps', 'Triceps skin fold thickness [mm]', value = 30),
+                               numericInput('insulin', '2-Hour serum insulin [mu U/ml]', value = 125),
+                               numericInput('mass', 'Body mass index [kg/(height in m)^2]', value = 25),
+                               numericInput('age', 'Age [years]', value = 35),
+                               numericInput('pedigree', 'Diabetes Pedigree Function [DPF]', value = .5))
     ),
     
 
@@ -186,9 +186,9 @@ ui <- fluidPage(
                   
                   tabPanel("Pima Indians",
                            br(),
-                           h4(HTML(paste0("Model's dynamic probability of a positive diabetes diagnosis based on information in the fields below:", textOutput("Predictions")))),
+                           h4(HTML(paste0("Probability of a positive diabetes diagnosis:", textOutput("Predictions")))),
                            tabsetPanel(id = "tabs_pima", type = "tabs",
-                                       tabPanel("Reactive Plot",
+                                       tabPanel("Plot",
                                                 plotOutput('reactivePlot', 
                                                            brush = brushOpts(
                                                              id = "brush1"))
@@ -501,6 +501,7 @@ server <- function(input, output) {
   ## ---
   ## Ab hier Pima Indians
   ## ---
+  
   #load and rename pima data frame
   data(PimaIndiansDiabetes)
   pima <- PimaIndiansDiabetes
