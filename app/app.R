@@ -3,6 +3,7 @@
 ##  - PIMA: Exploration bei plots (boxplot, hist) sind noch nicht kompatibel mit Mehrfachvariablenauswahl
 ##  - PIMA: QQPlots fehlen
 ##  - PIMA: Für einen bzw 2 aussagekräftige corrplots entscheiden
+##  - PIMA: Predictions an restliches Modell anpassen/fixen?!
 ##  - Generell: verschönern, bugfixes
 
 library(shiny)
