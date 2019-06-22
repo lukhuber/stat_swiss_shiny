@@ -3,25 +3,25 @@
 ##  - Mehr Transformationen der Variablen in Berechnungscode implementieren
 ##  - LM Plot funktioniert noch nicht mit mehreren Variablen - liegt an der predict Funktion und der neuen lmResults() (Formel sieht anders aus)
 ##  - Plots ein/ausblende Funktion ("show plots") besser ausnützen und evt. noch 1, 2 Plots einfügen die zur Erklärung des Modells dienen könnten?
+##  - AIC, BIC, Corrplots, quadratic transformation
 
 library(shiny)
 library(maptools)
 library(car)
-#packages die aus dem neuen copypaste code bentigt werden - kann man denk ich noch rauscoden
 library(plotrix)
 library(openintro)
 library(gridExtra)
 library(ggplot2)
-#library(shinyWidgets)
 library(ngram)
+library(corrplot)
 
 ## ---
 ## Pima Indians libraries
 ## ---
+library(MASS)
 library(mlbench) # for Pima Indian Diabetes dataset
 library(caret) # for prediction building functions
 library(dplyr)
-library(ggplot2)
 library(e1071)
 
 
@@ -30,9 +30,9 @@ library(e1071)
 ## AUFBAU DES LAYOUTS
 ## ---
 ui <- fluidPage(
-  titlePanel("Spezielle Statistik Übung, Dataset: Swiss | HUBER, VIEHBÖCK"),
+  titlePanel("Spezielle Statistik Übung | HUBER, VIEHBÖCK"),
   
-  ## ---
+  ## ---  
   ## Sidebar
   ## ---
   sidebarLayout(
@@ -90,17 +90,18 @@ ui <- fluidPage(
                        div(id='tab1_sidebar',
                            radioButtons("type", label = h3("Transformation type:"),
                                         list("None" = "none",
+                                             "Squared" = "sqr",
                                              "Logarithmic" = "log",
                                              "Exponentially" = "exp")))
       ),
                            
-      conditionalPanel(condition = "input.tabs_reg == 'Linear Regression Model'",
-                       div(id="tab1_sidebar",
-                           print(h3("Display plots:")),
-                           checkboxInput("donum1", "Make #1 plot", value = T),
-                           checkboxInput("donum2", "Make #2 plot", value = F),
-                           checkboxInput("donum3", "Make #3 plot", value = F))
-      ),
+      # conditionalPanel(condition = "input.tabs_reg == 'Linear Regression Model'",
+      #                  div(id="tab1_sidebar",
+      #                      print(h3("Display plots:")),
+      #                      checkboxInput("donum1", "Make #1 plot", value = T),
+      #                      checkboxInput("donum2", "Make #2 plot", value = F),
+      #                      checkboxInput("donum3", "Make #3 plot", value = F))
+      # ),
       
       ## ---
       ## Auswahl für Pima Indians
@@ -115,7 +116,9 @@ ui <- fluidPage(
                                numericInput('insulin', '2-Hour serum insulin [mu U/ml]', value = 125),
                                numericInput('mass', 'Body mass index [kg/(height in m)^2]', value = 25),
                                numericInput('age', 'Age [years]', value = 35),
-                               numericInput('pedigree', 'Diabetes Pedigree Function [DPF]', value = .5))
+                               numericInput('pedigree', 'Diabetes Pedigree Function [DPF]', value = .5)),
+      
+      fluid=T, width=2
     ),
     
 
@@ -132,15 +135,17 @@ ui <- fluidPage(
                            br(),
                            tabsetPanel(id = "tabs_exp", type = "tabs",
                                        
-                                       tabPanel("Boxplot",
+                                       tabPanel("Localisation",
                                                 fluidRow(
                                                   column(6, plotOutput("boxplot1")),
                                                   column(6, plotOutput("boxplot2")),
                                                   column(6, verbatimTextOutput("summary_vars")),
                                                   column(6, verbatimTextOutput("summary_vars2")))), 
                                        
-                                       tabPanel("Scatterplot", plotOutput("scatterplot")),
-                                       
+                                       tabPanel("Scatterplot", fluidRow(
+                                                  column(12, plotOutput("scatterplot")),
+                                                  column(12, plotOutput("corrplot")))),
+                                        
                                        tabPanel("Distribution",
                                                 fluidRow(
                                                   column(6, plotOutput("distribution1")),
@@ -171,9 +176,10 @@ ui <- fluidPage(
                                                   column(3,plotOutput("lmplot2")),
                                                   column(3,plotOutput("lmplot3")),
                                                   column(3,plotOutput("lmplot4")),
+                                                  column(12,plotOutput("scatter")))),
                                                   
-                                                  print(h4("Plotgraph")),
-                                                  column(12, plotOutput("plotgraph")))),
+                                                  #print(h4("Plotgraph")),
+                                                  #column(12, plotOutput("plotgraph")))),
                                        
                                        tabPanel("Residuals", 
                                                 print(h4("Residual plots")),
@@ -181,20 +187,25 @@ ui <- fluidPage(
                                                 column(12, plotOutput("residuals"))
                                        ),
                                        
-                                       tabPanel("Model Summary", verbatimTextOutput("summary")),
+                                       tabPanel("Model Summary", 
+                                                fluidRow(
+                                                  print(h4("Summary")),
+                                                  column(12,verbatimTextOutput("summary")),
+                                                  print(h4("AIC")),
+                                                  column(12,verbatimTextOutput("aic")),
+                                                  print(h4("BIC")),
+                                                  column(12,verbatimTextOutput("bic"))))
                                        
-                                       tabPanel("LM plot", plotOutput("scatter")), # Lineares Regressionsmodell
-                                       
-                                       tabPanel("Logistic Regression Model", 
-                                                  verbatimTextOutput('logreg'))
                            )
                   ),
                   
                   tabPanel("Pima Indians",
                            br(),
                            print(h4("Probability of a positive diabetes diagonosis:", textOutput("Predictions"))),
-                           #h4(HTML(paste0("Probability of a positive diabetes diagnosis:", textOutput("Predictions")))),
                            tabsetPanel(id = "tabs_pima", type = "tabs",
+                                       tabPanel("Logistic Regression Model", 
+                                                verbatimTextOutput('logreg')),
+                                       
                                        tabPanel("Plot",
                                                 plotOutput('reactivePlot', 
                                                            brush = brushOpts(
@@ -260,6 +271,12 @@ server <- function(input, output) {
       y <- exp(y)
       swissdata <- exp(swissdata)
     }
+    if(input$type=="sqr"){
+      x <- exp(x)
+      y <- exp(y)
+      swissdata <- (swissdata)^2
+    }
+    
     predictors <- paste(input$indepvar,collapse="+")
     fml <- as.formula(paste("Education", " ~ ", paste(predictors, collapse="+")))
     print(fml)
@@ -289,6 +306,14 @@ server <- function(input, output) {
     #fit <- lm(swiss[,input$outcome] ~ swiss[,input$indepvar])
     #names(fit$coefficients) <- c("Intercept", input$var2)
     summary(lmResults())
+  })
+  
+  output$aic <- renderPrint({
+    AIC(lmResults())
+  })
+  
+  output$bic <- renderPrint({
+    BIC(lmResults())
   })
   
   ## ---
@@ -373,6 +398,11 @@ server <- function(input, output) {
     lines(lowess(swiss[,input$indepvar_exp],swiss[,input$outcome_exp]), col="blue")
   })
   
+  output$corrplot <- renderPlot({
+    corr <- cor(swiss)
+    corrplot(corr, method="number")
+  })
+  
   ## ---
   ## Logistische Regressionsmodell
   ## ---
@@ -405,31 +435,6 @@ server <- function(input, output) {
     #plot(lmResults(), ylab = input$outcome, xlab = input$indepvar)
     #abline(fit,col="red")
     crPlots(lmResults())
-  })
-  
-  ## ---
-  ## ANOVA
-  ## ---
-  output$anova <- renderText({
-    ## model fitting
-    Y = swiss$Education
-    X2 = swiss[,input$indepvar]
-    fm1 <- lm(Y ~ 1)
-    summary(fm1)
-    fmA <- anova(Y ~ swiss[,input$outcome])
-    summary(fmA)
-    fmB <- anova(Y ~ swiss[,input$indepvar])
-    summary(fmB)
-    fmAB <- anova(Y ~ swiss[,input$outcome] + swiss[,input$indepvar])
-    summary(fmAB)
-    fmAxB <- anova(Y ~ swiss[,input$outcome] * swiss[,input$indepvar])
-    summary(fmAxB)
-    
-    ## model selection
-    anova(fmAxB,fmAB)
-    anova(fmAB,fmA)
-    anova(fmAB,fmB)
-    
   })
   
   ## ---
@@ -473,48 +478,49 @@ server <- function(input, output) {
   ## ---
   output$scatter <- renderPlot({
     
-    data1 <- swiss
-    y <- swiss[,input$outcome_exp]
-    x <- swiss[,input$indepvar_exp]
-    
-    #used for confidence interval
-    xcon <- seq(min(x)-.1, max(x)+.1, .025)
-    
-    predictor <- data.frame(x=xcon)
-    
-    yhat <- predict(lmResults_old())    
-    yline <- predict(lmResults_old(), predictor)
-    
-    par(cex.main=1.5, cex.lab=1.5, cex.axis=1.5, mar = c(4,4,4,1))
-    
-    r.squared = round(summary(lmResults_old())$r.squared, 4)
-    corr.coef = round(sqrt(r.squared), 4)
-    
-    plot(c(min(x),max(x)),c(min(y,yline),max(y,yline)), 
-         type="n",
-         xlab="x",
-         ylab="y",
-         main=paste0("Regression Model\n","(R = ", corr.coef,", ", "R-squared = ", r.squared,")"))
-    
-    
-    newx <- seq(min(x), max(x), length.out=400)
-    confs <- predict(lmResults_old(), newdata = data.frame(x=newx), 
-                     interval = 'confidence')
-    preds <- predict(lmResults_old(), newdata = data.frame(x=newx), 
-                     interval = 'predict')
-    
-    polygon(c(rev(newx), newx), c(rev(preds[ ,3]), preds[ ,2]), col = grey(.95), border = NA)
-    polygon(c(rev(newx), newx), c(rev(confs[ ,3]), confs[ ,2]), col = grey(.75), border = NA)
-    
-    points(x,y,pch=19, col=COL[1,2])
-    # hier kommt fehler
-    lines(xcon, yline, lwd=2, col=COL[1])
-    
-    legend_pos = ifelse(lmResults_old()$coefficients[1] < 1, "topleft", "topright")
-    legend(legend_pos, inset=.05,
-           legend=c("Regression Line", "Confidence Interval", "Prediction Interval"), 
-           fill=c(COL[1],grey(.75),grey(.95)))
-    box()
+    #ggplot(swiss,aes(y="Education",x=input$indepvar))+geom_point()+geom_smooth(method="lm")
+    # data1 <- swiss
+    # y <- swiss[,input$outcome_exp]
+    # x <- swiss[,input$indepvar_exp]
+    # 
+    # #used for confidence interval
+    # xcon <- seq(min(x)-.1, max(x)+.1, .025)
+    # 
+    # predictor <- data.frame(x=xcon)
+    # 
+    # yhat <- predict(lmResults_old())    
+    # yline <- predict(lmResults_old(), predictor)
+    # 
+    # par(cex.main=1.5, cex.lab=1.5, cex.axis=1.5, mar = c(4,4,4,1))
+    # 
+    # r.squared = round(summary(lmResults_old())$r.squared, 4)
+    # corr.coef = round(sqrt(r.squared), 4)
+    # 
+    # plot(c(min(x),max(x)),c(min(y,yline),max(y,yline)), 
+    #      type="n",
+    #      xlab="x",
+    #      ylab="y",
+    #      main=paste0("Regression Model\n","(R = ", corr.coef,", ", "R-squared = ", r.squared,")"))
+    # 
+    # 
+    # newx <- seq(min(x), max(x), length.out=400)
+    # confs <- predict(lmResults_old(), newdata = data.frame(x=newx), 
+    #                  interval = 'confidence')
+    # preds <- predict(lmResults_old(), newdata = data.frame(x=newx), 
+    #                  interval = 'predict')
+    # 
+    # polygon(c(rev(newx), newx), c(rev(preds[ ,3]), preds[ ,2]), col = grey(.95), border = NA)
+    # polygon(c(rev(newx), newx), c(rev(confs[ ,3]), confs[ ,2]), col = grey(.75), border = NA)
+    # 
+    # points(x,y,pch=19, col=COL[1,2])
+    # # hier kommt fehler
+    # lines(xcon, yline, lwd=2, col=COL[1])
+    # 
+    # legend_pos = ifelse(lmResults_old()$coefficients[1] < 1, "topleft", "topright")
+    # legend(legend_pos, inset=.05,
+    #        legend=c("Regression Line", "Confidence Interval", "Prediction Interval"), 
+    #        fill=c(COL[1],grey(.75),grey(.95)))
+    # box()
   })
   
   ## ---
