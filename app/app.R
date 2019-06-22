@@ -13,6 +13,7 @@ library(openintro)
 library(gridExtra)
 library(ggplot2)
 #library(shinyWidgets)
+library(ngram)
 
 ## ---
 ## Pima Indians libraries
@@ -22,6 +23,7 @@ library(caret) # for prediction building functions
 library(dplyr)
 library(ggplot2)
 library(e1071)
+
 
 
 ## ---
@@ -89,7 +91,11 @@ ui <- fluidPage(
                            radioButtons("type", label = h3("Transformation type:"),
                                         list("None" = "none",
                                              "Logarithmic" = "log",
-                                             "Exponentially" = "exp")),
+                                             "Exponentially" = "exp")))
+      ),
+                           
+      conditionalPanel(condition = "input.tabs_reg == 'Linear Regression Model'",
+                       div(id="tab1_sidebar",
                            print(h3("Display plots:")),
                            checkboxInput("donum1", "Make #1 plot", value = T),
                            checkboxInput("donum2", "Make #2 plot", value = F),
@@ -100,8 +106,8 @@ ui <- fluidPage(
       ## Auswahl für Pima Indians
       ## ---
       conditionalPanel(condition = "input.navbar == 'Pima Indians'",
-                               h2("Measurements"),
-                               p("Enter information into the fields below to view the probablity of a positive diagnosis."),
+                               h2("Variables"),
+                               #p("Enter information into the fields below to view the probablity of a positive diagnosis."),
                                numericInput('pregnant', 'Number of pregnancies', value = 0),
                                numericInput('glucose', 'Plasma glucose concentration [mmol/L]', value = 120),
                                numericInput('pressure', 'Diastolic blood pressure [mm Hg]', value = 70),
@@ -186,7 +192,8 @@ ui <- fluidPage(
                   
                   tabPanel("Pima Indians",
                            br(),
-                           h4(HTML(paste0("Probability of a positive diabetes diagnosis:", textOutput("Predictions")))),
+                           print(h4("Probability of a positive diabetes diagonosis:", textOutput("Predictions"))),
+                           #h4(HTML(paste0("Probability of a positive diabetes diagnosis:", textOutput("Predictions")))),
                            tabsetPanel(id = "tabs_pima", type = "tabs",
                                        tabPanel("Plot",
                                                 plotOutput('reactivePlot', 
@@ -369,12 +376,24 @@ server <- function(input, output) {
   ## ---
   ## Logistische Regressionsmodell
   ## ---
-  # mit Pima Indians machen! Bestimmen ob eine Frau Diabetes bekommen wird ja/nein -> neue app?
   output$logreg <- renderPrint({
-    recode <- swiss[,input$outcome]
+    v <- swiss[,input$indepvar]
+    v <- c(v)
+    
+    if (length(v) > 5 | length(v) < 2) {
+      test <- input$indepvar
+    } else {
+      test <- paste(names(v), sep = "+", collapse = "+")
+    }
+    
+    recode <- swiss[,"Education"]
     recode[recode>input$prob[1]] <- 1
     recode[recode>1] <- 0
-    logistic_model <- glm(recode ~ swiss[,input$indepvar], data = swiss, family = binomial)
+
+    formula <- test
+    
+    mymodel <- as.formula(concatenate("recode ~ ", formula))
+    logistic_model <- glm(mymodel, data = swiss, family = binomial)
     summary(logistic_model)
   })
   
