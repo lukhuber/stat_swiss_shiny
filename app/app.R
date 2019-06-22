@@ -1,7 +1,5 @@
 ## TODO: 
 ##  - Plots ein/ausblende Funktion ("show plots") besser ausnützen und evt. noch 1, 2 Plots einfügen die zur Erklärung des Modells dienen könnten?
-##  - PIMA: Exploration bei plots (boxplot, hist) sind noch nicht kompatibel mit Mehrfachvariablenauswahl
-##  - PIMA: QQPlots fehlen
 ##  - PIMA: Für einen bzw 2 aussagekräftige corrplots entscheiden
 ##  - PIMA: Predictions an restliches Modell anpassen/fixen?!
 ##  - Generell: verschönern, bugfixes
@@ -56,7 +54,7 @@ ui <- fluidPage(
       
       conditionalPanel(condition = "input.navbar == 'Regression'",
                        div(id='tab1_sidebar',
-                           checkboxGroupInput("indepvar", label = h3("Variablenauswahl"),
+                           checkboxGroupInput("indepvar", label = h3("Variables"),
                                        choices = list(
                                                       "Fertility" = "Fertility",
                                                       "Agriculture" = "Agriculture",
@@ -64,19 +62,31 @@ ui <- fluidPage(
                                                       "Catholic" = "Catholic",
                                                       "Infant.Mortality" = "Infant.Mortality"), selected = "Fertility"))),
       
-      conditionalPanel(condition = "input.navbar == 'Pima Indians'",
+      conditionalPanel(condition = "input.navbar == 'Pima Indians' & input.tabs_pima == 'Logistic Regression Model'",
                        div(id='tab1_sidebar',
-                           checkboxGroupInput("pimavars", label = h3("Variablenauswahl"),
+                           checkboxGroupInput("pimavars_multi", label = h3("Variables"),
                                               choices = list(
-                                                "age" = "age",
-                                                "bmi" = "bmi",
-                                                "npreg" = "npreg",
-                                                "glu" = "glu",
-                                                "bp" = "bp",
-                                                "skin" = "skin",
-                                                "ped" = "ped"), selected = "age"))),
+                                                "Age" = "age",
+                                                "BMI" = "bmi",
+                                                "Number of pregnancies" = "npreg",
+                                                "Plasma Glucose Concentration" = "glu",
+                                                "Diastolic blood pressure" = "bp",
+                                                "Triceps skin fold thickness" = "skin",
+                                                "Diabetes Pedigree Function" = "ped"), selected = "age"))),
+      
+      conditionalPanel(condition = "input.navbar == 'Pima Indians' & input.tabs_pima != 'Logistic Regression Model' & input.tabs_pima != 'Prediction'",
+                       div(id='tab1_sidebar',
+                           radioButtons("pimavars", label = h3("Variables"),
+                                              choices = list(
+                                                "Age" = "age",
+                                                "BMI" = "bmi",
+                                                "Number of pregnancies" = "npreg",
+                                                "Plasma Glucose Concentration" = "glu",
+                                                "Diastolic blood pressure" = "bp",
+                                                "Triceps skin fold thickness" = "skin",
+                                                "Diabetes Pedigree Function" = "ped"), selected = "age"))),
 
-      conditionalPanel(condition = "input.navbar == 'Pima Indians'",
+      conditionalPanel(condition = "input.navbar == 'Pima Indians' & input.tabs_pima == 'Exploration'",
                        div(id='tab1_sidebar',
                            selectInput("pima_type", label = h3("Diabetes"),
                                        choices = list("Yes" = "Yes",
@@ -111,7 +121,7 @@ ui <- fluidPage(
       ## ---
       ## Auswahl für Transformationstyp und anzuzeigende Plots (nur bei lin. RM angezeigt)
       ## ---
-      conditionalPanel(condition = "input.navbar == 'Regression' || input.navbar == 'Pima Indians'",
+      conditionalPanel(condition = "input.navbar == 'Regression' || input.navbar == 'Pima Indians' & input.tabs_pima != 'Logistic Regression Model' & input.tabs_pima != 'Prediction'",
                        div(id='tab1_sidebar',
                            radioButtons("type", label = h3("Transformation type:"),
                                         list("None" = "none",
@@ -138,7 +148,6 @@ ui <- fluidPage(
                                numericInput('glucose', 'Plasma glucose concentration [mmol/L]', value = 120),
                                numericInput('pressure', 'Diastolic blood pressure [mm Hg]', value = 70),
                                numericInput('triceps', 'Triceps skin fold thickness [mm]', value = 30),
-                               numericInput('insulin', '2-Hour serum insulin [mu U/ml]', value = 125),
                                numericInput('mass', 'Body mass index [kg/(height in m)^2]', value = 25),
                                numericInput('age', 'Age [years]', value = 35),
                                numericInput('pedigree', 'Diabetes Pedigree Function [DPF]', value = .5)),
@@ -235,6 +244,10 @@ ui <- fluidPage(
                                          column(6, plotOutput('pima_boxplot')),
                                          column(6, plotOutput('pima_hist')))),
                                        
+                                       tabPanel("QQ Plots", fluidRow(
+                                         column(12, plotOutput('pima_qqplot'))
+                                       )),
+                                       
                                        tabPanel("Correlations", fluidRow(
                                          column(12, plotOutput('pima_exp')),
                                          column(12, plotOutput('pima_corr')))),
@@ -254,12 +267,12 @@ ui <- fluidPage(
                                        
                                        
                                        tabPanel("Prediction", 
-                                                print(h4("Probability of a positive diabetes diagonosis:", textOutput("Predictions"))),
-                                                plotOutput('reactivePlot', 
-                                                           brush = brushOpts(
-                                                             id = "brush1")),
-                                                plotOutput('Glucose_Plot'),
-                                                plotOutput('VIP')
+                                                h4(HTML(paste0("Probability of a positive diabetes diagnosis:", textOutput("Predictions"))))
+                                                #plotOutput('reactivePlot', 
+                                                #           brush = brushOpts(
+                                                #             id = "brush1")),
+                                                #plotOutput('Glucose_Plot'),
+                                                #plotOutput('VIP')
                                        )
                            )
                   )
@@ -545,7 +558,7 @@ server <- function(input, output) {
   
   glmResults <- reactive({
     y <- pima$type
-    x <- input$pimavars
+    x <- input$pimavars_multi
     pimadata <- pima
     
     if(input$type=="log"){
@@ -564,7 +577,7 @@ server <- function(input, output) {
       pimadata <- (pimadata)^2
     }
     
-    predictors <- paste(input$pimavars,collapse="+")
+    predictors <- paste(input$pimavars_multi,collapse="+")
     gfml <- as.formula(paste("type", " ~ ", paste(predictors, collapse="+")))
     print(gfml)
     glm(gfml, data=pimadata, family=binomial)
@@ -577,6 +590,7 @@ server <- function(input, output) {
     #summary(subset(pima, pima$type == "No"))
     
   })
+  
   output$pima_summary_n <- renderPrint({
     #summary(pima)
     #table(pima$type)
@@ -584,7 +598,6 @@ server <- function(input, output) {
     summary(subset(pima, pima$type == "No"))
     
   })
-  
   
   output$pima_corr <- renderPlot({
     #corr
@@ -651,17 +664,27 @@ server <- function(input, output) {
     plot(glmResults(), which=4)
   })
   
+  ## ---
+  ## QQ-Plots
+  ## ---
+  output$pima_qqplot <- renderPlot({
+    qqnorm(pima[,input$pimavars], main="Q-Q Plot", xlab=input$pimavars)
+    qqline(pima[,input$pimavars])
+  })
+  
   
 
 
-  # # data(PimaIndiansDiabetes)
-  # # pima <- PimaIndiansDiabetes
+  # #load and rename pima data frame
+  # data(PimaIndiansDiabetes)
+  # pima <- PimaIndiansDiabetes
+   pima <- rbind(Pima.te, Pima.tr)
   # 
-  # #display structure
+  # #display structure 
   # str(pima)
   # 
   # #clarify meaning of the lone factor variable, and target of our analysis, diabetes
-  # pima$diabetes <- factor(pima$type, labels = c("Neg", "Pos"))
+  # pima$diabetes <- factor(pima$diabetes, labels = c("Neg", "Pos"))
   # 
   # #check to see if there are any irrelevant columns (>98% NA or blank)
   # !apply(pima, 2, function(x) sum(is.na(x)) > .98  || sum(x=="") > .98)
@@ -670,28 +693,24 @@ server <- function(input, output) {
   # set.seed(25)
   # 
   # #create 70/30 split for model training
-  # #inTrain <- createDataPartition(pima$diabetes, p = .7, list = FALSE)
-  # pimaTrain <- Pima.tr# pima[inTrain,] #Pima.tr # 
-  # pimaTest <- Pima.te#pima[-inTrain,] #Pima.te # 
-  # 
-  # pimaTrain$diabetes <- factor(Pima.tr$type, labels = c("Neg", "Pos"))
-  # pimaTest$diabetes <- factor(Pima.te$type, labels = c("Neg", "Pos"))
-  # 
+   inTrain <- createDataPartition(pima$type, p = .7, list = FALSE) 
+   pimaTrain <- pima[inTrain,]
+  # pimaTest <- pima[-inTrain,]
   # 
   # #show the split
   # rbind(dim(pimaTrain),dim(pimaTest))
   # 
   # #train the model using logistic regression
-  # modFit_GLM <- train(diabetes ~., data = pimaTrain, method = "glm")
+  modFit_GLM <- train(type ~., data = pimaTrain, method = "glm")
   # 
   # #display the final model
-  # modFit_GLM$finalModel
+  #modFit_GLM$finalModel
   # 
   # #predict on the test set
   # predictions <- predict(modFit_GLM,newdata=pimaTest)
   # 
   # #create DF of prediction probs
-  # predictionsProbs <- as.data.frame(predict(modFit_GLM,newdata=pimaTest,
+  # predictionsProbs <- as.data.frame(predict(modFit_GLM,newdata=pimaTest, 
   #                                           type="prob", se=TRUE))
   # 
   # #combine probability column to test set
@@ -703,12 +722,12 @@ server <- function(input, output) {
   # #display accuracy
   # caret::confusionMatrix(pimaTest$diabetes, predictions)
   # 
-  # #
+  # # 
   # # #exploratory data analysis
   # 
   # # Compute Information Values - http://r-statistics.co/Logistic-Regression-With-R.html
-  # # The smbinning::smbinning function converts a continuous variable into a categorical
-  # # variable using recursive partitioning. We will first convert them to categorical
+  # # The smbinning::smbinning function converts a continuous variable into a categorical 
+  # # variable using recursive partitioning. We will first convert them to categorical 
   # # variables and then, capture the information values for all variables in iv_df
   # 
   # # InformationValue::plotROC(pimaTest$diabetes, predictions)
@@ -718,18 +737,19 @@ server <- function(input, output) {
   # 
   # 
   # #function to predict based on data on available variables
-  # diabetes_Risk <- function(a = mean(pima$pregnant), b = mean(pima$glucose),
-  #                           c = mean(pima$pressure), d = mean(pima$triceps),
-  #                           e = mean(pima$insulin), f = mean(pima$mass),
-  #                           g = mean(pima$pedigree), h = mean(pima$age))
-  # {
-  #   values <- as.data.frame(cbind(a,b,c,d,e,f,g,h))
-  #   colnames(values) <- c("pregnant","glucose","pressure","triceps",
-  #                         "insulin","mass","pedigree","age")
-  # 
-  #   prediction_value <- predict(modFit_GLM,newdata=values, type = "prob")[[2]]
-  #   paste(round(100* prediction_value, 2), "%", sep="")
-  # }
+   diabetes_Risk <- function(a = mean(pima$npreg), b = mean(pima$glu), 
+                             c = mean(pima$bp), d = mean(pima$skin), 
+                             e = mean(pima$bmi), f = mean(pima$ped),
+                             g = mean(pima$age)) 
+                             
+   {
+     values <- as.data.frame(cbind(a,b,c,d,e,f,g))
+     colnames(values) <- c("npreg","glu","bp","skin",
+                           "bmi","ped", "age")
+     
+     prediction_value <- predict(modFit_GLM,newdata=values, type = "prob")[[2]]
+     paste(round(100* prediction_value, 2), "%", sep="")
+   }
   # 
   # #show most significant variables in the model
   # varImp_GLM <- varImp(modFit_GLM, useModel = FALSE)
@@ -743,10 +763,10 @@ server <- function(input, output) {
   #   arrange(desc(Importance))
   # 
   # #VIP
-  # varImp_GLM_plot <- ggplot(varImp_GLM, aes(x=Variables, y=Importance)) +
-  #   geom_bar(stat="identity",fill="skyblue",alpha=.8,width=.6) +
+  # varImp_GLM_plot <- ggplot(varImp_GLM, aes(x=Variables, y=Importance)) + 
+  #   geom_bar(stat="identity",fill="skyblue",alpha=.8,width=.6) + 
   #   coord_flip() +
-  #   labs(title = "Most Predictive Features of Diabetes",
+  #   labs(title = "Most Predictive Features of Diabetes", 
   #        subtitle = "Variable Importance Plot")
   # 
   # LM <- reactive({
@@ -770,11 +790,10 @@ server <- function(input, output) {
   #   #}
   # })
   # 
-  # output$Predictions <- renderPrint({
-  #   diabetes_Risk(input$pregnant,input$glucose,input$pressure,
-  #                 input$triceps,input$insulin,input$mass,input$pedigree,
-  #                 input$age)
-  # })
+  output$Predictions <- renderPrint({
+    diabetes_Risk(input$pregnant,input$glucose,input$pressure,
+                  input$triceps,input$mass,input$pedigree,input$age)
+   })
   # 
   # output$VIP <- renderPlot({varImp_GLM_plot})
   # 
