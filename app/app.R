@@ -1,9 +1,9 @@
 ## TODO: 
-##  - Logistische Regression mit Pima Indians - gibt R Vorlagen davon 
-##  - Mehr Transformationen der Variablen in Berechnungscode implementieren
-##  - LM Plot funktioniert noch nicht mit mehreren Variablen - liegt an der predict Funktion und der neuen lmResults() (Formel sieht anders aus)
 ##  - Plots ein/ausblende Funktion ("show plots") besser ausnützen und evt. noch 1, 2 Plots einfügen die zur Erklärung des Modells dienen könnten?
-##  - AIC, BIC, Corrplots, quadratic transformation
+##  - PIMA: Exploration bei plots (boxplot, hist) sind noch nicht kompatibel mit Mehrfachvariablenauswahl
+##  - PIMA: QQPlots fehlen
+##  - PIMA: Für einen bzw 2 aussagekräftige corrplots entscheiden
+##  - Generell: verschönern, bugfixes
 
 library(shiny)
 library(maptools)
@@ -240,6 +240,10 @@ ui <- fluidPage(
                                        
                                        tabPanel("Logistic Regression Model",
                                                 verbatimTextOutput('pima_logreg'),
+                                                print(h4("AIC")),
+                                                column(12,verbatimTextOutput("pima_aic")),
+                                                print(h4("BIC")),
+                                                column(12,verbatimTextOutput("pima_bic")),
                                                 column(3, plotOutput('pima_glmplot')),
                                                 column(3, plotOutput('pima_glmplot2')),
                                                 column(3, plotOutput('pima_glmplot3')),
@@ -615,6 +619,14 @@ server <- function(input, output) {
     #tidy(lg1)
     
   })
+  output$pima_aic <- renderPrint({
+    AIC(glmResults())
+  })
+  
+  output$pima_bic <- renderPrint({
+    BIC(glmResults())
+  })
+  
   
   
   output$pima_boxplot <- renderPlot({
@@ -637,6 +649,7 @@ server <- function(input, output) {
   output$pima_glmplot4 <- renderPlot({
     plot(glmResults(), which=4)
   })
+  
   
 
 
