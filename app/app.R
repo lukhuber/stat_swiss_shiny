@@ -232,12 +232,18 @@ ui <- fluidPage(
                                          print(h4("Summary: Negative")),
                                          verbatimTextOutput('pima_summary_n'),
                                          column(6, plotOutput('pima_boxplot')),
-                                         column(6, plotOutput('pima_hist')),
+                                         column(6, plotOutput('pima_hist')))),
+                                       
+                                       tabPanel("Correlations", fluidRow(
                                          column(12, plotOutput('pima_exp')),
                                          column(12, plotOutput('pima_corr')))),
                                        
                                        tabPanel("Logistic Regression Model",
-                                                verbatimTextOutput('pima_logreg')
+                                                verbatimTextOutput('pima_logreg'),
+                                                column(3, plotOutput('pima_glmplot')),
+                                                column(3, plotOutput('pima_glmplot2')),
+                                                column(3, plotOutput('pima_glmplot3')),
+                                                column(3, plotOutput('pima_glmplot4'))
                                                 ),
                                        
                                        
@@ -556,7 +562,7 @@ server <- function(input, output) {
     predictors <- paste(input$pimavars,collapse="+")
     gfml <- as.formula(paste("type", " ~ ", paste(predictors, collapse="+")))
     print(gfml)
-    lm(gfml, data=pimadata)
+    glm(gfml, data=pimadata, family=binomial)
   })
   
   output$pima_summary_y <- renderPrint({
@@ -604,8 +610,8 @@ server <- function(input, output) {
   output$pima_logreg <- renderPrint({
     #lg1 <- glm(type ~ age + bmi, data = pima, family = binomial)
     #
-    summary(glmResults())$coefficients[, c(1, 4)]
-    #summary(lg1)
+    #summary(glmResults())$coefficients[, c(1, 4)]
+    summary(glmResults())
     #tidy(lg1)
     
   })
@@ -619,18 +625,20 @@ server <- function(input, output) {
     hist(pima[,input$pimavars][pima$type==input$pima_type],breaks=seq(-0.5,max(pima[,input$pimavars])+0.5),ylim=c(0,60),xlab=input$pimavars,main=paste("Diabetes: ", input$pima_type))
   })
   
+  output$pima_glmplot <- renderPlot({
+    plot(glmResults())
+  })
+  output$pima_glmplot2 <- renderPlot({
+    plot(glmResults(), which=2)
+  })
+  output$pima_glmplot3 <- renderPlot({
+    plot(glmResults(), which=3)
+  })
+  output$pima_glmplot4 <- renderPlot({
+    plot(glmResults(), which=4)
+  })
   
-  
-  boxplot(pima$age[pima$type=="Yes"],pima$age[pima$type=="No"],names=label,main="Age")
-  hist(pima$npreg[pima$type=="Yes"],breaks=seq(-0.5,max(pima$npreg)+0.5),ylim=c(0,60),xlab="No. of Pregnancies",main="Diabetic")
-  hist(pima$npreg[pima$type=="No"],breaks=seq(-0.5,max(pima$npreg)+0.5),ylim=c(0,60),xlab="No. of Pregnancies",main="Non-Diabetic")
-  boxplot(pima$glu[pima$type=="Yes"],pima$glu[pima$type=="No"],names=label,main="Glucose Concentration")
-  boxplot(pima$bp[pima$type=="Yes"],pima$bp[pima$type=="No"],names=label,main="Diastolic BP")
-  boxplot(pima$skin[pima$type=="Yes"],pima$skin[pima$type=="No"],names=label,main="Skin Fold Thickness")
-  hist(pima$bmi[pima$type=="Yes"],breaks=seq(min(pima$bmi),max(pima$bmi),length=20),ylim=c(0,35),xlab="Body Mass Index",main="Diabetic")
-  hist(pima$bmi[pima$type=="No"],breaks=seq(min(pima$bmi),max(pima$bmi),length=20),ylim=c(0,35),xlab="Body Mass Index",main="Non-Diabetic")
-  boxplot(pima$ped[pima$type=="Yes"],pima$ped[pima$type=="No"],names=label,main="Pedigree Function")
-  
+
 
   # # data(PimaIndiansDiabetes)
   # # pima <- PimaIndiansDiabetes
