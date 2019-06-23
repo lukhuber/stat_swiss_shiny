@@ -265,7 +265,9 @@ ui <- fluidPage(
                                                 column(3, plotOutput('pima_glmplot')),
                                                 column(3, plotOutput('pima_glmplot2')),
                                                 column(3, plotOutput('pima_glmplot3')),
-                                                column(3, plotOutput('pima_glmplot4'))
+                                                column(3, plotOutput('pima_glmplot4')),
+                                                h4("Residuals"),
+                                                column(6, plotOutput('pima_residuals'))
                                                 ),
                                        
                                        
@@ -425,30 +427,30 @@ server <- function(input, output) {
   ## QQ-Plot der 1. Variable
   ## ---
   output$qqplot1 <- renderPlot({
-    qqnorm(swiss[,input$outcome_exp], main="Q-Q Plot", xlab=input$outcome_exp)
-    qqline(swiss[,input$outcome_exp])
+    qqnorm(swiss[,input$outcome_exp], main="Q-Q Plot", xlab=input$outcome_exp, col=COL[1,2], pch=19)
+    qqline(swiss[,input$outcome_exp], col=COL[1], lwd=2)
   })
   
   ## ---
   ## QQ-Plot der 2. Vari￼able
   ## ---
   output$qqplot2 <- renderPlot({
-    qqnorm(swiss[,input$indepvar_exp], main="Q-Q Plot", xlab=input$indepvar_exp)
-    qqline(swiss[,input$indepvar_exp])
+    qqnorm(swiss[,input$indepvar_exp], main="Q-Q Plot", xlab=input$indepvar_exp, col=COL[1,2], pch=19)
+    qqline(swiss[,input$indepvar_exp], col=COL[1,2], lwd=2)
   })
   
   ## ---
   ## Boxplot der 1. Variable
   ## ---
   output$boxplot1 <- renderPlot({
-    boxplot(swiss[,input$outcome_exp], main="Boxplot", xlab=input$outcome_exp)
+    boxplot(swiss[,input$outcome_exp], main="Boxplot", xlab=input$outcome_exp, col=COL[1,2])
   })
   
   ## ---
   ## Boxplot der 2. Variable
   ## ---
   output$boxplot2 <- renderPlot({
-    boxplot(swiss[,input$indepvar_exp], main="Boxplot", xlab=input$indepvar_exp)
+    boxplot(swiss[,input$indepvar_exp], main="Boxplot", xlab=input$indepvar_exp, col=COL[1,2])
   })
   
   ## ---
@@ -469,26 +471,26 @@ server <- function(input, output) {
   ## ---
   ## Logistische Regressionsmodell
   ## ---
-  output$logreg <- renderPrint({
-    v <- swiss[,input$indepvar]
-    v <- c(v)
-    
-    if (length(v) > 5 | length(v) < 2) {
-      test <- input$indepvar
-    } else {
-      test <- paste(names(v), sep = "+", collapse = "+")
-    }
-    
-    recode <- swiss[,"Education"]
-    recode[recode>input$prob[1]] <- 1
-    recode[recode>1] <- 0
-
-    formula <- test
-    
-    mymodel <- as.formula(concatenate("recode ~ ", formula))
-    logistic_model <- glm(mymodel, data = swiss, family = binomial)
-    summary(logistic_model)
-  })
+  # output$logreg <- renderPrint({
+  #   v <- swiss[,input$indepvar]
+  #   v <- c(v)
+  #   
+  #   if (length(v) > 5 | length(v) < 2) {
+  #     test <- input$indepvar
+  #   } else {
+  #     test <- paste(names(v), sep = "+", collapse = "+")
+  #   }
+  #   
+  #   recode <- swiss[,"Education"]
+  #   recode[recode>input$prob[1]] <- 1
+  #   recode[recode>1] <- 0
+  # 
+  #   formula <- test
+  #   
+  #   mymodel <- as.formula(concatenate("recode ~ ", formula))
+  #   logistic_model <- glm(mymodel, data = swiss, family = binomial)
+  #   summary(logistic_model)
+  # })
   
   ## ---
   ## Lineares Regressionsmodell
@@ -504,14 +506,15 @@ server <- function(input, output) {
   ## Histogramm der 1. Variable
   ## ---
   output$distribution1 <- renderPlot({
-    hist(swiss[,input$outcome_exp], main="", xlab=input$outcome_exp)
+    hist(swiss[,input$outcome_exp], main=paste("Histogram of", input$outcome_exp), xlab=input$outcome_exp, col=COL[1,2])
   })
   
   ## ---
   ## Histogramm der 2. Variable
   ## ---
   output$distribution2 <- renderPlot({
-    hist(swiss[,input$indepvar_exp], main="", xlab=input$indepvar_exp)
+    hist(swiss[,input$indepvar_exp], main=paste("Histogram of", input$indepvar_exp), xlab=input$indepvar_exp, col=COL[1,2])
+    lines(density(swiss[,input$indepvar_exp]), col=COL[1], lwd=2)
   })
   
   ## ---
@@ -534,7 +537,7 @@ server <- function(input, output) {
     lines(density(residuals), col = COL[1], lwd = 2)
     qqnorm(residuals, pch=19, col = COL[1,2], main = "Normal Q-Q Plot of Residuals")
     qqline(residuals, col = COL[1], lwd = 2)
-  }, height=300)
+  })
   
   ## ---
   ## LM Plot 2 - TODO: FUNKTIONIERT NOCH NICHT RICHTIG, AUF MEHRERE VARIABLEN AUSDEHEN!
@@ -605,11 +608,11 @@ server <- function(input, output) {
     
   })
   
-  ggplot(pima, aes(x = age, y = type)) +
-    geom_jitter(width = 0.5, height = 0.03, alpha = .2) +
-    geom_smooth(method = "glm", se = FALSE,
-                method.args = list(family = "binomial")) +
-    labs(y = expression(hat(P)(Diabetic)))
+  # ggplot(pima, aes(x = age, y = type)) +
+  #   geom_jitter(width = 0.5, height = 0.03, alpha = .2)
+  #   geom_smooth(method = "glm", se = FALSE,
+  #               method.args = list(family = "binomial")) +
+  #   labs(y = expression(hat(P)(Diabetic)))
   
   output$pima_logreg <- renderPrint({
     #summary(glmResults())$coefficients[, c(1, 4)]
@@ -629,18 +632,18 @@ server <- function(input, output) {
     #label<-c("Diabetic","Non-Diabetic")
     #boxplot(pima[,input$pimavars][pima$type=="Yes"],pima[,input$pimavars][pima$type=="No"],names=label,main=input$pimavars)
     if(input$pima_type == 'All') {
-      boxplot(pima[,input$pimavars],main=paste("Diabetes: ", input$pima_type),xlab=input$pimavars)
+      boxplot(pima[,input$pimavars],main=paste("Diabetes: ", input$pima_type),xlab=input$pimavars, col=COL[1,2])
     }
     else {
-      boxplot(pima[,input$pimavars][pima$type==input$pima_type],main=paste("Diabetes: ", input$pima_type),xlab=input$pimavars)
+      boxplot(pima[,input$pimavars][pima$type==input$pima_type],main=paste("Diabetes: ", input$pima_type),xlab=input$pimavars, col=COL[1,2])
     }
   })
   output$pima_hist <- renderPlot({
     if(input$pima_type == 'All') {
-      hist(pima[,input$pimavars], breaks=seq(-0.5,max(pima[,input$pimavars])+0.5), ylim=c(0,60),xlab=input$pimavars, main=paste("Diabetes: ", input$pima_type))
+      hist(pima[,input$pimavars], breaks=seq(-0.5,max(pima[,input$pimavars])+0.5), ylim=c(0,60),xlab=input$pimavars, main=paste("Diabetes: ", input$pima_type), col=COL[1,2])
     }
     else {
-      hist(pima[,input$pimavars][pima$type==input$pima_type],breaks=seq(-0.5,max(pima[,input$pimavars])+0.5),ylim=c(0,60),xlab=input$pimavars,main=paste("Diabetes: ", input$pima_type))
+      hist(pima[,input$pimavars][pima$type==input$pima_type],breaks=seq(-0.5,max(pima[,input$pimavars])+0.5),ylim=c(0,60),xlab=input$pimavars,main=paste("Diabetes: ", input$pima_type), col=COL[1,2])
     }
     
     
@@ -668,8 +671,20 @@ server <- function(input, output) {
   ## QQ-Plots
   ## ---
   output$pima_qqplot <- renderPlot({
-    qqnorm(pima[,input$pimavars], main="Q-Q Plot", xlab=input$pimavars)
-    qqline(pima[,input$pimavars])
+    qqnorm(pima[,input$pimavars], main="Q-Q Plot", xlab=input$pimavars, col=COL[1,2], pch=19)
+    qqline(pima[,input$pimavars], col=COL[1,2], lwd=2)
+  })
+  
+  output$pima_residuals <- renderPlot({
+    #par(mfrow=c(1,3), cex.main=2, cex.lab=2, cex.axis=2, mar=c(4,5,2,2))
+    residuals = glmResults()$residuals
+    d = density(residuals)$y
+    h = hist(residuals, plot = FALSE)
+    hist(residuals, main="Histogram of Residuals", xlab="Residuals", 
+         col=COL[1,2], prob = TRUE, ylim = c(0,max(max(d), max(h$density))))
+    lines(density(residuals), col = COL[1], lwd = 2)
+    #qqnorm(residuals, pch=19, col = COL[1,2], main = "Normal Q-Q Plot of Residuals")
+    #qqline(residuals, col = COL[1], lwd = 2)
   })
   
   
