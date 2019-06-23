@@ -90,7 +90,8 @@ ui <- fluidPage(
                        div(id='tab1_sidebar',
                            selectInput("pima_type", label = h3("Diabetes"),
                                        choices = list("Yes" = "Yes",
-                                                      "No" = "No"), selected = "Yes"))
+                                                      "No" = "No",
+                                                      "All" = "All"), selected = "Yes"))
       ),
                                                       
       
@@ -121,7 +122,7 @@ ui <- fluidPage(
       ## ---
       ## Auswahl für Transformationstyp und anzuzeigende Plots (nur bei lin. RM angezeigt)
       ## ---
-      conditionalPanel(condition = "input.navbar == 'Regression' || input.navbar == 'Pima Indians' & input.tabs_pima != 'Logistic Regression Model' & input.tabs_pima != 'Prediction'",
+      conditionalPanel(condition = "input.navbar == 'Regression' || input.navbar == 'Pima Indians' & input.tabs_pima == 'Logistic Regression Model' & input.tabs_pima != 'Prediction'",
                        div(id='tab1_sidebar',
                            radioButtons("type", label = h3("Transformation type:"),
                                         list("None" = "none",
@@ -145,12 +146,12 @@ ui <- fluidPage(
                                h2("Variables"),
                                #p("Enter information into the fields below to view the probablity of a positive diagnosis."),
                                numericInput('pregnant', 'Number of pregnancies', value = 0),
-                               numericInput('glucose', 'Plasma glucose concentration [mmol/L]', value = 120),
-                               numericInput('pressure', 'Diastolic blood pressure [mm Hg]', value = 70),
-                               numericInput('triceps', 'Triceps skin fold thickness [mm]', value = 30),
-                               numericInput('mass', 'Body mass index [kg/(height in m)^2]', value = 25),
-                               numericInput('age', 'Age [years]', value = 35),
-                               numericInput('pedigree', 'Diabetes Pedigree Function [DPF]', value = .5)),
+                               numericInput('glucose', 'Glucose concentration', value = 120),
+                               numericInput('pressure', 'Blood pressure', value = 70),
+                               numericInput('triceps', 'Triceps skin fold thickness', value = 30),
+                               numericInput('mass', 'Body mass index', value = 25),
+                               numericInput('age', 'Age', value = 35),
+                               numericInput('pedigree', 'Diabetes Pedigree Function', value = .5)),
 
       fluid=T, width=3
     ),
@@ -237,16 +238,19 @@ ui <- fluidPage(
                            br(),
                            tabsetPanel(id = "tabs_pima", type = "tabs",
                                        tabPanel("Exploration", fluidRow(
-                                         print(h4("Summary: Positive")),
-                                         verbatimTextOutput('pima_summary_y'),
-                                         print(h4("Summary: Negative")),
-                                         verbatimTextOutput('pima_summary_n'),
+                                         br(),
+                                         print(h4("Summary")),
+                                         column(6,verbatimTextOutput('pima_summary_y'),
+                                                verbatimTextOutput('pima_summary_n')),
+                                         #print(h4("Summary: Negative")),
+                                         column(6, plotOutput('pima_barplot')),
+                                         #column(6,verbatimTextOutput('pima_summary_n')),
+                                         
+                                         
+                                         br(),
                                          column(6, plotOutput('pima_boxplot')),
-                                         column(6, plotOutput('pima_hist')))),
-                                       
-                                       tabPanel("QQ Plots", fluidRow(
-                                         column(12, plotOutput('pima_qqplot'))
-                                       )),
+                                         column(6, plotOutput('pima_hist')),
+                                         column(12, plotOutput('pima_qqplot')))),
                                        
                                        tabPanel("Correlations", fluidRow(
                                          column(12, plotOutput('pima_exp')),
@@ -549,8 +553,7 @@ server <- function(input, output) {
   
   # Exploring and visualising
   output$pima_exp <- renderPlot({
-    barplot(table(pima$type), main = "Diabetes in Pima Indian Women")
-    summary(pima)
+    #summary(pima)
     #library GGally
     pairs(subset(pima, select = -c(type)), col = as.factor(pima$type))
     #ggpairs(pima, columns = 1:7, title = "",  mapping=(ggplot2::aes(colour = "type")), axisLabels = "show", columnLabels = colnames(pima[, 1:7]))
@@ -562,23 +565,17 @@ server <- function(input, output) {
     pimadata <- pima
     
     if(input$type=="log"){
-      x <- log(x)
-      y <- log(y)
-      pimadata <- log(pimadata)
+      pimadata <- log(pimadata[,1:7])
     }
     if(input$type=="exp"){
-      x <- exp(x)
-      y <- exp(y)
-      pimadata <- exp(pimadata)
+      pimadata <- exp(pimadata[,1:7])
     }
     if(input$type=="sqr"){
-      x <- exp(x)
-      y <- exp(y)
-      pimadata <- (pimadata)^2
+      pimadata <- (pimadata[,1:7])^2
     }
     
     predictors <- paste(input$pimavars_multi,collapse="+")
-    gfml <- as.formula(paste("type", " ~ ", paste(predictors, collapse="+")))
+    gfml <- as.formula(paste("pima$type", " ~ ", paste(predictors, collapse="+")))
     print(gfml)
     glm(gfml, data=pimadata, family=binomial)
   })
@@ -608,30 +605,15 @@ server <- function(input, output) {
     
   })
   
-  table(pima$type)
-  barplot(table(pima$type), main = "Diabetes in Pima Indian Women")
-  summary(pima)
-  #library GGally
-  pairs(subset(pima, select = -c(type)), col = as.factor(pima$type))
-  ggpairs(pima, columns = 1:7, title = "",  mapping=(ggplot2::aes(colour = "type")), axisLabels = "show", columnLabels = colnames(pima[, 1:7]))
-  
-  
-  
   ggplot(pima, aes(x = age, y = type)) +
     geom_jitter(width = 0.5, height = 0.03, alpha = .2) +
     geom_smooth(method = "glm", se = FALSE,
                 method.args = list(family = "binomial")) +
     labs(y = expression(hat(P)(Diabetic)))
   
-  #library(broom)
-  
   output$pima_logreg <- renderPrint({
-    #lg1 <- glm(type ~ age + bmi, data = pima, family = binomial)
-    #
     #summary(glmResults())$coefficients[, c(1, 4)]
     summary(glmResults())
-    #tidy(lg1)
-    
   })
   output$pima_aic <- renderPrint({
     AIC(glmResults())
@@ -644,11 +626,29 @@ server <- function(input, output) {
   
   
   output$pima_boxplot <- renderPlot({
-    label<-c("Diabetic","Non-Diabetic")
-    boxplot(pima[,input$pimavars][pima$type=="Yes"],pima[,input$pimavars][pima$type=="No"],names=label,main=input$pimavars)
+    #label<-c("Diabetic","Non-Diabetic")
+    #boxplot(pima[,input$pimavars][pima$type=="Yes"],pima[,input$pimavars][pima$type=="No"],names=label,main=input$pimavars)
+    if(input$pima_type == 'All') {
+      boxplot(pima[,input$pimavars],main=paste("Diabetes: ", input$pima_type),xlab=input$pimavars)
+    }
+    else {
+      boxplot(pima[,input$pimavars][pima$type==input$pima_type],main=paste("Diabetes: ", input$pima_type),xlab=input$pimavars)
+    }
   })
   output$pima_hist <- renderPlot({
-    hist(pima[,input$pimavars][pima$type==input$pima_type],breaks=seq(-0.5,max(pima[,input$pimavars])+0.5),ylim=c(0,60),xlab=input$pimavars,main=paste("Diabetes: ", input$pima_type))
+    if(input$pima_type == 'All') {
+      hist(pima[,input$pimavars], breaks=seq(-0.5,max(pima[,input$pimavars])+0.5), ylim=c(0,60),xlab=input$pimavars, main=paste("Diabetes: ", input$pima_type))
+    }
+    else {
+      hist(pima[,input$pimavars][pima$type==input$pima_type],breaks=seq(-0.5,max(pima[,input$pimavars])+0.5),ylim=c(0,60),xlab=input$pimavars,main=paste("Diabetes: ", input$pima_type))
+    }
+    
+    
+  })
+  
+  
+  output$pima_barplot <- renderPlot({
+    barplot(table(pima$type), main = "Diabetes in Pima Indian Women")
   })
   
   output$pima_glmplot <- renderPlot({
@@ -680,37 +680,37 @@ server <- function(input, output) {
   # pima <- PimaIndiansDiabetes
    pima <- rbind(Pima.te, Pima.tr)
   # 
-  # #display structure 
+  # #display structure
   # str(pima)
   # 
   # #clarify meaning of the lone factor variable, and target of our analysis, diabetes
-  # pima$diabetes <- factor(pima$diabetes, labels = c("Neg", "Pos"))
+  # pima$diabetes <- factor(pima$type, labels = c("Neg", "Pos"))
   # 
   # #check to see if there are any irrelevant columns (>98% NA or blank)
   # !apply(pima, 2, function(x) sum(is.na(x)) > .98  || sum(x=="") > .98)
   # 
   # #set seed and split dataset for predictions
   # set.seed(25)
-  # 
-  # #create 70/30 split for model training
+
+  # #create 70/30 split for model training_
    inTrain <- createDataPartition(pima$type, p = .7, list = FALSE) 
    pimaTrain <- pima[inTrain,]
-  # pimaTest <- pima[-inTrain,]
+   pimaTest <- pima[-inTrain,]
   # 
   # #show the split
-  # rbind(dim(pimaTrain),dim(pimaTest))
+   rbind(dim(pimaTrain),dim(pimaTest))
   # 
-  # #train the model using logistic regression
+   #train the model using logistic regression
   modFit_GLM <- train(type ~., data = pimaTrain, method = "glm")
   # 
-  # #display the final model
-  #modFit_GLM$finalModel
-  # 
-  # #predict on the test set
-  # predictions <- predict(modFit_GLM,newdata=pimaTest)
-  # 
+  #display the final model
+  modFit_GLM$finalModel
+
+  #predict on the test set
+  predictions <- predict(modFit_GLM,newdata=pimaTest)
+
   # #create DF of prediction probs
-  # predictionsProbs <- as.data.frame(predict(modFit_GLM,newdata=pimaTest, 
+  # predictionsProbs <- as.data.frame(predict(modFit_GLM,newdata=pimaTest,
   #                                           type="prob", se=TRUE))
   # 
   # #combine probability column to test set
@@ -750,34 +750,34 @@ server <- function(input, output) {
      prediction_value <- predict(modFit_GLM,newdata=values, type = "prob")[[2]]
      paste(round(100* prediction_value, 2), "%", sep="")
    }
-  # 
-  # #show most significant variables in the model
+
+  #show most significant variables in the model
   # varImp_GLM <- varImp(modFit_GLM, useModel = FALSE)
-  # 
-  # #set variable & importance info as a clean DF
+
+  #set variable & importance info as a clean DF
   # varImp_GLM <- data.frame(varImp_GLM$importance)
   # varImp_GLM$Variables <- rownames(varImp_GLM)
   # rownames(varImp_GLM) <- NULL
   # varImp_GLM <- select(varImp_GLM, Variables, Pos) %>%
   #   rename(Importance = Pos) %>%
   #   arrange(desc(Importance))
-  # 
+
   # #VIP
-  # varImp_GLM_plot <- ggplot(varImp_GLM, aes(x=Variables, y=Importance)) + 
-  #   geom_bar(stat="identity",fill="skyblue",alpha=.8,width=.6) + 
+  # varImp_GLM_plot <- ggplot(varImp_GLM, aes(x=Variables, y=Importance)) +
+  #   geom_bar(stat="identity",fill="skyblue",alpha=.8,width=.6) +
   #   coord_flip() +
-  #   labs(title = "Most Predictive Features of Diabetes", 
+  #   labs(title = "Most Predictive Features of Diabetes",
   #        subtitle = "Variable Importance Plot")
-  # 
-  # LM <- reactive({
-  #   brushed_data <- brushedPoints(pimaWpredictions, input$brush1,
-  #                                 xvar = "glucose", yvar = "Prediction_Probability")
-  #   if(nrow(brushed_data) < 2){
-  #     return(NULL)
-  #   }
-  #   lm(Prediction_Probability ~ glucose, data = brushed_data)
-  # })
-  # 
+
+  LM <- reactive({
+    brushed_data <- brushedPoints(pimaWpredictions, input$brush1,
+                                  xvar = "glucose", yvar = "Prediction_Probability")
+    if(nrow(brushed_data) < 2){
+      return(NULL)
+    }
+    lm(Prediction_Probability ~ glucose, data = brushed_data)
+  })
+
   # output$reactivePlot <- renderPlot({
   #   plot(pimaWpredictions$glucose, pimaWpredictions$Prediction_Probability,
   #        xlab = "Glucose",
@@ -789,12 +789,12 @@ server <- function(input, output) {
   #   abline(LM(), col = "red", lwd = 2)
   #   #}
   # })
-  # 
+
   output$Predictions <- renderPrint({
     diabetes_Risk(input$pregnant,input$glucose,input$pressure,
                   input$triceps,input$mass,input$pedigree,input$age)
    })
-  # 
+  # #
   # output$VIP <- renderPlot({varImp_GLM_plot})
   # 
   # output$Glucose_Plot <- renderPlot({
@@ -805,8 +805,8 @@ server <- function(input, output) {
   #     xlab("Plasma Glucose Levels") +
   #     ylab("Model's Prediction Probability") +
   #     ggtitle("Glucose Levels vs Model Diabetes Prediction Probability")
-
-  #})
+  # 
+  # })
 }
 
 shinyApp(ui = ui, server = server)
