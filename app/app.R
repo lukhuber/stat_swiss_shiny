@@ -1,8 +1,6 @@
 ## TODO: 
-##  - Plots ein/ausblende Funktion ("show plots") besser ausnützen und evt. noch 1, 2 Plots einfügen die zur Erklärung des Modells dienen könnten?
-##  - PIMA: Für einen bzw 2 aussagekräftige corrplots entscheiden
-##  - PIMA: Predictions an restliches Modell anpassen/fixen?!
-##  - Generell: verschönern, bugfixes
+##  - Transformation poly, standardisieren rein
+##  - pairs plot?
 
 library(shiny)
 library(maptools)
@@ -145,7 +143,7 @@ ui <- fluidPage(
       # Auswahl für Pima Indians
       # ## ---
       conditionalPanel(condition = "input.navbar == 'Pima Indians' & input.tabs_pima == 'Prediction'",
-                               h2("Variables"),
+                               h4("Parameters"),
                                #p("Enter information into the fields below to view the probablity of a positive diagnosis."),
                                numericInput('pregnant', 'Number of pregnancies', value = 0),
                                numericInput('glucose', 'Glucose concentration', value = 120),
@@ -232,6 +230,7 @@ ui <- fluidPage(
                                                   column(12,verbatimTextOutput("aic")),
                                                   print(h4("BIC")),
                                                   column(12,verbatimTextOutput("bic"))))
+                                                  #column(12,verbatimTextOutput('step'))))
                                        
                            )
                   ),
@@ -264,6 +263,7 @@ ui <- fluidPage(
                                                 column(12,verbatimTextOutput("pima_aic")),
                                                 print(h4("BIC")),
                                                 column(12,verbatimTextOutput("pima_bic")),
+                                                #column(12,verbatimTextOutput('pima_step')),
                                                 column(3, plotOutput('pima_glmplot')),
                                                 column(3, plotOutput('pima_glmplot2')),
                                                 column(3, plotOutput('pima_glmplot3')),
@@ -471,6 +471,10 @@ server <- function(input, output) {
   output$corrplot <- renderPlot({
     corr <- cor(swiss)
     corrplot(corr, method="number")
+  })
+  
+  output$step <- renderText({
+    step(lmResults())
   })
   
   ## ---
@@ -698,13 +702,17 @@ server <- function(input, output) {
     glm(gfml, data=Pima.tr, family=binomial)
   })
 
+  output$pima_step <- renderText({
+    step(glmResults())
+  })
+  
   
   output$pima_prediction <- renderTable({
     prob_pred <- predict(glmTrain(), type='response', newdata = Pima.te)
     type_pred <- ifelse(prob_pred > 0.5, 1, 0)
     cm <- table(Pima.te$type, type_pred)
-    acc <- sum(diag(cm)) / sum(cm)
     cm
+    #confusionMatrix(type_pred, Pima.te$type)
     })
   
   output$pima_acc <- renderText({
