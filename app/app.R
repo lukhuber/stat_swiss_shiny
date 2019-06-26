@@ -219,16 +219,6 @@ ui <- fluidPage(
                                                   #print(h4("Plotgraph")),
                                                   #column(12, plotOutput("plotgraph")))),
                                        
-                                       tabPanel("Test",
-                                                fluidRow(
-                                                  column(12,plotOutput("viv_lm_plots")),
-                                                  column(3,plotOutput("viv_lm_plot1")),
-                                                  column(3,plotOutput("viv_lm_plot2")),
-                                                  column(3,plotOutput("viv_lm_plot3")),
-                                                  column(3,plotOutput("viv_lm_plot5")),
-                                                  column(12,plotOutput("viv_lm_summary"))
-                                                )),
-                                       
                                        tabPanel("Residuals", 
                                                 print(h4("Residual plots")),
                                                 column(12, plotOutput("linreg")),
@@ -786,75 +776,6 @@ server <- function(input, output) {
   #     ggtitle("Glucose Levels vs Model Diabetes Prediction Probability")
 
   #})
-  
-  
-  ## ---
-  ## Vivs Code
-  ## ---
-  
-  linear_model <- reactive({
-    x <- swiss[,"Education"]
-    y <- paste(input$indepvar, collapse="+")
-    swiss_modified <- swiss_sorted[input$observation,]
-    tx <- sprintf("lin_model <- lm (%s~%s, data=swiss_modified)", x, y)
-    eval(parse(text=tx))
-    return(lin_model)
-  })
-  
-  logistic_model <- reactive({
-    x <- swiss[,"Education"]
-    y <- paste(input$indepvar, collapse="+")
-    swiss_modified <- swiss_sorted[input$observation,]
-    tx <- sprintf("log_model <- lm (log(%s) ~ %s, data=swiss_modified)", x, y)
-    eval(parse(text=tx))
-    return(log_model)
-  })
-  
-  squared_model <- reactive({
-    x <- swiss[,"Education"]
-    y <- paste(input$indepvar, collapse="+")
-    swiss_modified <- swiss_sorted[input$observation,]
-    tx <- sprintf("sq_model <- lm ((%s)^2 ~ %s, data=swiss_modified)", x, y)
-    eval(parse(text=tx))
-    return(sq_model)
-  })
-  cubic_model <- reactive({
-    x <- swiss[,"Education"]
-    y <- paste(input$indepvar, collapse="+")
-    swiss_modified <- swiss_sorted[input$observation,]
-    tx <- sprintf("cub_model <- lm ((%s)^3 ~ %s, data=swiss_modified)", x, y)
-    eval(parse(text=tx))
-    return(cub_model)
-  })
-  
-  model <- reactive({switch(input$type,
-                            "none" = linear_model(),
-                            "log" = logistic_model(),
-                            "sqr" = squared_model(),
-                            "exp" = cubic_model()
-  )})
-  
-  output$viv_lm_summary <- renderPrint({
-    summary(model())})
-  
-  output$viv_lm_plots <- renderPlot({
-    par(mfrow = c(2,2))
-    plot(model(), cex.axis = 1.5, cex.lab = 1.5)
-    par(mfrow = c(1,1))
-  })
-  output$viv_lm_plot1 <- renderPlot({
-    plot(model(), which = 1)
-  })
-  output$viv_lm_plot2 <- renderPlot({
-    plot(model(), which = 2)
-  })
-  output$viv_lm_plot3 <- renderPlot({
-    plot(model(), which = 3)
-  })
-  output$viv_lm_plot5 <- renderPlot({
-    plot(model(), which = 5)
-  })
-
 }
 
 shinyApp(ui = ui, server = server)
